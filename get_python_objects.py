@@ -1,6 +1,4 @@
 """
-
-
 Example AST from parsing wand.public.apis __init__.py file.
 
 ```text
@@ -29,10 +27,14 @@ Module(
 """
 from __future__ import annotations
 
+import argparse
+import json
+
 import ast
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass
 from pathlib import Path
 
+import config
 
 @dataclass(frozen=True, slots=True)
 class ExportedName:
@@ -44,7 +46,7 @@ class ExportedName:
     declared_in_all: bool = False
 
 
-def parse_public_exports(path: str | Path) -> list[ExportedName]:
+def parse_public_exports(path: Path) -> list[ExportedName]:
     """Parse a module file and return end-user-facing exported names.
 
     Policy:
@@ -67,36 +69,29 @@ def parse_public_exports(path: str | Path) -> list[ExportedName]:
     Returns:
         A list of ExportedName objects representing the public API of the module.
     """
-    path = Path(path)
     source = path.read_text(encoding="utf-8")
-
-    # Parse the source into an AST
     module = ast.parse(source, filename=str(path))
-
-    # Read source lines to find doc:exclude comments
     lines = source.splitlines()
 
     all_names: list[str] | None = None
     imported_names: dict[str, ExportedName] = {}
 
-    # First pass: collect __all__ names and imported names.
+    # Phase 1 — Collect: walk top-level AST nodes to gather two things:
+    #   all_names:      strings from __all__ (if it exists)
+    #   imported_names:  provenance for each "from x import y" name
     for node in module.body:
 
-        # Check for __all__ assignment
         if _is_all_assignment(node):
             all_names = _extract_all_names(node, lines)
             continue
 
-        # Check for "from x import y" statements to track imported names
-        # and source info (i.e. module path).
         if isinstance(node, ast.ImportFrom):
             module_name = _format_importfrom_module(node)
             for alias in node.names:
                 if alias.name == "*":
                     continue
 
-                # For "from x import y as z", the public name is "z".
-                # For "from x import y", the public name is "y".
+                # "from x import y as z" → public name is z, source name is y
                 public_name = alias.asname or alias.name
                 imported_names[public_name] = ExportedName(
                     public_name=public_name,
@@ -105,12 +100,14 @@ def parse_public_exports(path: str | Path) -> list[ExportedName]:
                     declared_in_all=False,
                 )
 
-    # If __all__ doesn't exist, use imported names ("from x import y") 
-    # as the source of truth
+    # Phase 2 — Resolve: decide which names are part of the public API.
+
+    # No __all__ → imported names are the public API.
     if all_names is None:
         return [imported_names[name] for name in sorted(imported_names)]
 
-    # If __all__ exists, use it as the source of truth and provide source module.
+    # __all__ exists → it is authoritative. For each name, look up its
+    # import provenance (source module/name) if available.
     exports: list[ExportedName] = []
     for name in all_names:
         imported_item = imported_names.get(name)
@@ -217,3 +214,39 @@ def _format_importfrom_module(node: ast.ImportFrom) -> str:
         The module path as a string, including any relative dots.
     """
     return f'{"." * node.level}{node.module or ""}'
+
+def write_public_exports_json(source_config: dict, output_path: str | Path,
+) -> None:
+    """Parse public exports from a module file and write them to JSON.
+
+    Args:
+        source_config: A dict with "namespace" and "pckg_init_file" keys
+            from config.SOURCE (e.g. config.SOURCE["SDK"]).
+        output_path: Where to write the resulting JSON.
+    """
+
+    # Prefer __init__.pyi for parsing if it exists, otherwise fall back to __init__.py.
+    init_file = source_config["pckg_init_file"]["__init__.pyi"]
+    if init_file is None:
+        init_file = source_config["pckg_init_file"]["__init__.py"]
+
+    path = Path(init_file)
+    exports = parse_public_exports(path)
+    data = [asdict(export) for export in exports]
+
+    output_path = Path(output_path)
+    output_path.write_text(
+        json.dumps(data, indent=2, ensure_ascii=False) + "\n",
+        encoding="utf-8",
+    )
+
+
+def main(args):
+    for name, source_config in config.SOURCE.items():
+        output_file = Path(args.output_dir) / f"{name.lower()}_exports.json"
+        write_public_exports_json(source_config, output_file)
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="Extract public API from a Python module.")
+    parser.add_argument("--output-dir", type=str, default=".", help="Directory for output JSON files")
+    main(parser.parse_args())
