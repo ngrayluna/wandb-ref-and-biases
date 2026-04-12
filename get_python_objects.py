@@ -1,7 +1,32 @@
 """
-Get Python objects from a module.
-"""
 
+
+Example AST from parsing wand.public.apis __init__.py file.
+
+```text
+Module(
+    body=[
+        Assign(
+            targets=[
+                    Name(id='__all__', ctx=Store())],
+            value=Tuple(
+                    elts=[
+                        Constant(value='Api'),
+                        Constant(value='RetryingClient'),
+                        Constant(value='requests'),
+                        Constant(value='ArtifactCollection'),
+                        Constant(value='ArtifactCollections'),
+                ...),
+        ...),
+    ImportFrom(
+        module='wandb.apis.public.api',
+        names=[
+            alias(name='Api'),
+            alias(name='RetryingClient')],
+        level=0),          
+    ...,
+)
+"""
 from __future__ import annotations
 
 import ast
@@ -35,10 +60,20 @@ def parse_public_exports(path: str | Path) -> list[ExportedName]:
     - Star imports are ignored.
     - Dynamic ``__all__`` construction is not supported.
     - Relative imports are preserved as written.
+
+    Args:
+        path: The file path to the module to parse.
+
+    Returns:
+        A list of ExportedName objects representing the public API of the module.
     """
     path = Path(path)
     source = path.read_text(encoding="utf-8")
+
+    # Parse the source into an AST
     module = ast.parse(source, filename=str(path))
+
+    # Read source lines to find doc:exclude comments
     lines = source.splitlines()
 
     all_names: list[str] | None = None
@@ -46,16 +81,22 @@ def parse_public_exports(path: str | Path) -> list[ExportedName]:
 
     # First pass: collect __all__ names and imported names.
     for node in module.body:
+
+        # Check for __all__ assignment
         if _is_all_assignment(node):
             all_names = _extract_all_names(node, lines)
             continue
 
+        # Check for "from x import y" statements to track imported names
+        # and source info (i.e. module path).
         if isinstance(node, ast.ImportFrom):
             module_name = _format_importfrom_module(node)
             for alias in node.names:
                 if alias.name == "*":
                     continue
 
+                # For "from x import y as z", the public name is "z".
+                # For "from x import y", the public name is "y".
                 public_name = alias.asname or alias.name
                 imported_names[public_name] = ExportedName(
                     public_name=public_name,
@@ -64,31 +105,20 @@ def parse_public_exports(path: str | Path) -> list[ExportedName]:
                     declared_in_all=False,
                 )
 
-    # If __all__ doesn't exist, use imported names as the source of truth
+    # If __all__ doesn't exist, use imported names ("from x import y") 
+    # as the source of truth
     if all_names is None:
         return [imported_names[name] for name in sorted(imported_names)]
 
-    # If __all__ exists, use it as the source of truth and enrich source info
+    # If __all__ exists, use it as the source of truth and provide source module.
     exports: list[ExportedName] = []
     for name in all_names:
         imported_item = imported_names.get(name)
-
-        if imported_item is None:
-            exports.append(
-                ExportedName(
-                    public_name=name,
-                    source_module=None,
-                    source_name=None,
-                    declared_in_all=True,
-                )
-            )
-            continue
-
         exports.append(
             ExportedName(
-                public_name=imported_item.public_name,
-                source_module=imported_item.source_module,
-                source_name=imported_item.source_name,
+                public_name=name,
+                source_module=imported_item.source_module if imported_item else None,
+                source_name=imported_item.source_name if imported_item else None,
                 declared_in_all=True,
             )
         )
@@ -97,7 +127,20 @@ def parse_public_exports(path: str | Path) -> list[ExportedName]:
 
 
 def _is_all_assignment(node: ast.stmt) -> bool:
-    """Return True if the node assigns to ``__all__``."""
+    """Detects __all__ = [...] assignments.
+
+    First, check if node is an element of type `ast.Assign`. 
+    If yes, check if target is of type `ast.Name` with id "__all__". 
+    
+    Returns True if both conditions are met, False otherwise.
+
+    Args:
+        node: An AST node to check for being an assignment to __all__.
+    ```
+    
+    Returns:
+        True if the node assigns to ``__all__``.
+    """
     if not isinstance(node, ast.Assign):
         return False
 
@@ -108,7 +151,19 @@ def _is_all_assignment(node: ast.stmt) -> bool:
 
 
 def _extract_all_names(node: ast.Assign, lines: list[str]) -> list[str]:
-    """Extract non-excluded string names from a simple ``__all__`` assignment."""
+    """Pulls string literals from the __all__ list/tuple. 
+    
+    Filters out entries annotated with ``doc:exclude``, and returns the
+    resulting list of names.
+
+    Args:
+        node: The AST node representing the __all__ assignment.
+        lines: The source lines of the module (read from the file e.g. __init__.py),
+            used to check for doc:exclude comments
+
+    Returns:
+        A list of names extracted from the __all__ assignment, excluding any marked with doc:exclude.
+    """
     value = node.value
     if not isinstance(value, (ast.List, ast.Tuple)):
         return []
@@ -128,16 +183,37 @@ def _extract_all_names(node: ast.Assign, lines: list[str]) -> list[str]:
 
 
 def _node_has_doc_exclude(node: ast.AST, lines: list[str]) -> bool:
-    """Return True if any source line for the node contains ``doc:exclude``."""
-    start = getattr(node, "lineno", None)
-    end = getattr(node, "end_lineno", start)
+    """Check whether a ``doc:exclude`` marker appears on the source lines spanning *node*.
 
-    if start is None or end is None:
+    Returns True if any line in the node's span contains "doc:exclude".
+
+    Args:
+        node: The AST node to check for doc:exclude comments.
+        lines: The source lines (read from the file) of the module, used to
+            check for doc:exclude comments.
+
+    Returns:
+        True if any line in the node's span contains "doc:exclude", False otherwise.
+    """
+    start = getattr(node, "lineno", None)
+    if start is None:
         return False
 
+    end = getattr(node, "end_lineno", start)
+
+    # Use 1-based line numbers to index into lines (which is 0-based)
     return any("doc:exclude" in line for line in lines[start - 1 : end])
 
 
 def _format_importfrom_module(node: ast.ImportFrom) -> str:
-    """Return the module string for an ``ImportFrom`` node, preserving relativity."""
+    """Reconstructs the module path from an ImportFrom node. 
+    
+    Preservers relative dots (e.g., ...foo.bar)
+
+    Args:
+        node: An AST node of type ast.ImportFrom, representing a "from x import y" statement.
+
+    Returns:
+        The module path as a string, including any relative dots.
+    """
     return f'{"." * node.level}{node.module or ""}'
