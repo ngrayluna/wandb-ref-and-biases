@@ -44,9 +44,10 @@ class ExportedName:
     source_module: str | None = None
     source_name: str | None = None
     declared_in_all: bool = False
+    config_namespace: str = ""
 
 
-def parse_public_exports(path: Path) -> list[ExportedName]:
+def parse_public_exports(path: Path, namespace: str) -> list[ExportedName]:
     """Parse a module file and return end-user-facing exported names.
 
     Policy:
@@ -117,6 +118,7 @@ def parse_public_exports(path: Path) -> list[ExportedName]:
                 source_module=imported_item.source_module if imported_item else None,
                 source_name=imported_item.source_name if imported_item else None,
                 declared_in_all=True,
+                config_namespace=namespace,
             )
         )
 
@@ -225,13 +227,15 @@ def write_public_exports_json(source_config: dict, output_path: str | Path,
         output_path: Where to write the resulting JSON.
     """
 
+    namespace = source_config["namespace"]
+
     # Prefer __init__.pyi for parsing if it exists, otherwise fall back to __init__.py.
     init_file = source_config["pckg_init_file"]["__init__.pyi"]
     if init_file is None:
         init_file = source_config["pckg_init_file"]["__init__.py"]
 
     path = Path(init_file)
-    exports = parse_public_exports(path)
+    exports = parse_public_exports(path, namespace)
     data = [asdict(export) for export in exports]
 
     output_path = Path(output_path)
