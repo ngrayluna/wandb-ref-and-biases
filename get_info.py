@@ -14,7 +14,6 @@ from typing import Any
 # Export discovery models
 # ---------------------------------------------------------------------------
 
-
 @dataclass(frozen=True, slots=True)
 class ExportedName:
     """A public name exported by a package module."""
@@ -27,7 +26,6 @@ class ExportedName:
 # ---------------------------------------------------------------------------
 # Public docs models
 # ---------------------------------------------------------------------------
-
 
 @dataclass(frozen=True, slots=True)
 class ArgumentDoc:
@@ -366,7 +364,6 @@ def _is_documentable_method(member: Any) -> bool:
 # ---------------------------------------------------------------------------
 # Docstring parsing
 # ---------------------------------------------------------------------------
-
 
 @dataclass(frozen=True, slots=True)
 class ParsedDocstring:
@@ -718,7 +715,7 @@ if __name__ == "__main__":
         package_name=namespace,
     )
 
-    output_path = Path(f"./{public_export}_docs.json")
+    output_path = Path(f"./docs_json/{public_export}_docs.json")
     output_path.write_text(
         json.dumps(docs_map, indent=2, ensure_ascii=False) + "\n",
         encoding="utf-8",
