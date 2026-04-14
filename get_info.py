@@ -41,7 +41,7 @@ class ArgumentDoc:
 class ReturnDoc:
     """Documentation for a return value."""
 
-    name: str = ""
+    type_name: str = ""
     description: str = ""
 
 
@@ -89,13 +89,15 @@ class FunctionDoc:
 class ClassDoc:
     """Documentation for a public class."""
 
-    name: str
-    class_name: str = ""
+    public_name: str
+    qualname: str = ""
     description: str = ""
     examples: str = ""
     source_file: str = ""
     line_number: int | None = None
     import_statement: str = ""
+    signature: str | None = None
+    arguments: list[ArgumentDoc] = field(default_factory=list)
     properties: list[PropertyDoc] = field(default_factory=list)
     methods: list[MethodDoc] = field(default_factory=list)
 
@@ -213,7 +215,7 @@ def build_public_doc_entry(
     if item.kind == "class":
         return _build_class_doc(item)
 
-    if item.kind in {"function", "builtin", "routine", "method"}:
+    if item.kind in {"function", "builtin", "method"}:
         return _build_function_doc(item)
 
     return _build_attribute_doc(item)
@@ -251,13 +253,18 @@ def _build_class_doc(item: DocumentableObject) -> ClassDoc:
     methods = _collect_class_methods(item.obj)
 
     return ClassDoc(
-        name=item.public_name,
-        class_name=item.qualname or item.public_name,
+        public_name=item.public_name,
+        qualname=item.qualname or item.public_name,
         description=parsed.description,
         examples=parsed.examples,
         source_file=item.source_file or "",
         line_number=item.line_number,
         import_statement=item.import_statement,
+        signature=item.signature,
+        arguments=_build_argument_docs(
+            obj=item.obj,
+            parsed_args=parsed.arguments,
+        ),
         properties=properties,
         methods=methods,
     )
@@ -280,11 +287,12 @@ def _build_attribute_doc(item: DocumentableObject) -> AttributeDoc:
 # Class member collection
 # ---------------------------------------------------------------------------
 
-
+## Note: inspect.getmembers(cls) may include inherited members we don't want.
 def _collect_class_properties(cls: type[Any]) -> list[PropertyDoc]:
     """Collect public properties from a class."""
     properties: list[PropertyDoc] = []
 
+    # Future: for name, member in cls.__dict__.items():
     for name, member in inspect.getmembers(cls):
         if name.startswith("_"):
             continue
@@ -306,11 +314,13 @@ def _collect_class_properties(cls: type[Any]) -> list[PropertyDoc]:
 
     return properties
 
-
+# Note: inspect.getmembers(cls) may include inherited members we don't want.
+# Note[2]: It might give already-bound/transformed objects, not the raw descriptor from the class dictionary.
 def _collect_class_methods(cls: type[Any]) -> list[MethodDoc]:
     """Collect public methods from a class."""
     methods: list[MethodDoc] = []
 
+    # Future: for name, member in cls.__dict__.items():
     for name, member in inspect.getmembers(cls):
         if name.startswith("_"):
             continue
@@ -494,7 +504,7 @@ def _parse_return_block(lines: list[str]) -> list[ReturnDoc]:
             if current_name is not None or current_description:
                 returns.append(
                     ReturnDoc(
-                        name=current_name or "",
+                        type_name=current_name or "",
                         description=_join_description_lines(current_description),
                     )
                 )
@@ -513,7 +523,7 @@ def _parse_return_block(lines: list[str]) -> list[ReturnDoc]:
     if current_name is not None or current_description:
         returns.append(
             ReturnDoc(
-                name=current_name or "",
+                type_name=current_name or "",
                 description=_join_description_lines(current_description),
             )
         )
@@ -607,7 +617,7 @@ def _build_default_return_docs(obj: Any) -> list[ReturnDoc]:
 
     return [
         ReturnDoc(
-            name="return",
+            type_name="return",
             description=_format_annotation(annotation),
         )
     ]
@@ -691,13 +701,17 @@ def _get_object_kind(obj: Any) -> str:
 
 if __name__ == "__main__":
 
+    #filename = "./sdk_exports.json"
+    filename = "./public_exports.json"
+    entry = 5
+
     # Read in JSON file. See sdk_exports.json for expected format.
-    with open("./sdk_exports.json", "r") as f:
+    with open(filename, "r", encoding="utf-8") as f:
         exports_data = json.load(f)
 
     # For now, let's just look at the first export
-    public_export = exports_data[0]["public_name"]
-    namespace = exports_data[0]["config_namespace"]
+    public_export = exports_data[entry]["public_name"]
+    namespace = exports_data[entry]["config_namespace"]
 
     docs_map, missing = build_public_docs_map(
         object_name=public_export,
@@ -709,8 +723,6 @@ if __name__ == "__main__":
         json.dumps(docs_map, indent=2, ensure_ascii=False) + "\n",
         encoding="utf-8",
     )
-
-    print(docs_map)
 
     if missing:
         print("\nMissing exports:")
