@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import json
 
-import ast
 import importlib
 import inspect
 import textwrap
@@ -24,15 +23,6 @@ class ExportedName:
     source_module: str | None = None
     source_name: str | None = None
     declared_in_all: bool = False
-
-
-@dataclass(frozen=True, slots=True)
-class ResolvedExport:
-    """A parsed export paired with its resolved runtime object."""
-
-    export: ExportedName
-    obj: Any
-
 
 # ---------------------------------------------------------------------------
 # Public docs models
@@ -61,7 +51,7 @@ class PropertyDoc:
 
     name: str
     description: str = ""
-    returns: str = ""
+    value_description: str = ""
 
 
 @dataclass(frozen=True, slots=True)
@@ -70,7 +60,7 @@ class MethodDoc:
 
     name: str
     description: str = ""
-    func_name: str = ""
+    qualname: str = ""
     signature: str | None = None
     source_file: str = ""
     line_number: int | None = None
@@ -84,12 +74,12 @@ class FunctionDoc:
     """Documentation for a public function."""
 
     name: str
-    func_name: str = ""
+    qualname: str = ""
     description: str = ""
     examples: str = ""
     source_file: str = ""
     line_number: int | None = None
-    init_statement: str = ""
+    import_statement: str = ""
     signature: str | None = None
     arguments: list[ArgumentDoc] = field(default_factory=list)
     returns: list[ReturnDoc] = field(default_factory=list)
@@ -105,7 +95,7 @@ class ClassDoc:
     examples: str = ""
     source_file: str = ""
     line_number: int | None = None
-    init_statement: str = ""
+    import_statement: str = ""
     properties: list[PropertyDoc] = field(default_factory=list)
     methods: list[MethodDoc] = field(default_factory=list)
 
@@ -119,7 +109,7 @@ class AttributeDoc:
     description: str = ""
     source_file: str = ""
     line_number: int | None = None
-    init_statement: str = ""
+    import_statement: str = ""
 
 
 @dataclass(frozen=True, slots=True)
@@ -138,13 +128,11 @@ class DocumentableObject:
     declared_in_all: bool
     source_file: str | None
     line_number: int | None
-    init_statement: str
+    import_statement: str
 
     @classmethod
-    def from_resolved_export(cls, resolved: ResolvedExport) -> "DocumentableObject":
+    def from_export(cls, export: ExportedName, obj: Any) -> "DocumentableObject":
         """Build a documentable record from a resolved export."""
-        obj = resolved.obj
-        export = resolved.export
         source_file = _safe_get_source_file(obj)
         line_number = _safe_get_line_number(obj)
 
@@ -161,7 +149,7 @@ class DocumentableObject:
             declared_in_all=export.declared_in_all,
             source_file=source_file,
             line_number=line_number,
-            init_statement=_build_init_statement(export),
+            import_statement=_build_import_statement(export),
         )
 
 
@@ -170,35 +158,22 @@ class DocumentableObject:
 def resolve_public_exports(
     package_name: str,
     exports: list[ExportedName],
-) -> tuple[list[ResolvedExport], list[ExportedName]]:
+) -> tuple[list[tuple[ExportedName, Any]], list[ExportedName]]:
     """Resolve parsed exports against the imported package namespace."""
     module = importlib.import_module(package_name)
 
-    resolved: list[ResolvedExport] = []
+    resolved: list[tuple[ExportedName, Any]] = []
     missing: list[ExportedName] = []
 
     for export in exports:
         if hasattr(module, export.public_name):
             resolved.append(
-                ResolvedExport(
-                    export=export,
-                    obj=getattr(module, export.public_name),
-                )
+                (export, getattr(module, export.public_name))
             )
         else:
             missing.append(export)
 
     return resolved, missing
-
-
-def build_documentable_objects(
-    resolved_exports: list[ResolvedExport],
-) -> list[DocumentableObject]:
-    """Convert resolved exports into normalized documentable objects."""
-    return [
-        DocumentableObject.from_resolved_export(resolved)
-        for resolved in resolved_exports
-    ]
 
 
 # ---------------------------------------------------------------------------
@@ -207,7 +182,7 @@ def build_documentable_objects(
 
 
 def build_public_docs_map(
-    object: str,
+    object_name: str,
     package_name: str,
 ) -> tuple[dict[str, dict[str, Any]], list[ExportedName]]:
     """Build a JSON-serializable mapping of public docs data.
@@ -217,8 +192,12 @@ def build_public_docs_map(
         - a mapping keyed by public export name
         - a list of exports that could not be resolved at runtime
     """
-    resolved, missing = resolve_public_exports(package_name, [ExportedName(public_name=object)])
-    documentable_objects = build_documentable_objects(resolved)
+    resolved, missing = resolve_public_exports(package_name, [ExportedName(public_name=object_name)])
+    documentable_objects = [
+        DocumentableObject.from_export(export, obj)
+        for export, obj in resolved
+    ]
+
 
     docs_map: dict[str, dict[str, Any]] = {}
     for item in documentable_objects:
@@ -253,12 +232,12 @@ def _build_function_doc(item: DocumentableObject) -> FunctionDoc:
 
     return FunctionDoc(
         name=item.public_name,
-        func_name=item.qualname or item.public_name,
+        qualname=item.qualname or item.public_name,
         description=parsed.description,
         examples=parsed.examples,
         source_file=item.source_file or "",
         line_number=item.line_number,
-        init_statement=item.init_statement,
+        import_statement=item.import_statement,
         signature=item.signature,
         arguments=arguments,
         returns=returns,
@@ -278,7 +257,7 @@ def _build_class_doc(item: DocumentableObject) -> ClassDoc:
         examples=parsed.examples,
         source_file=item.source_file or "",
         line_number=item.line_number,
-        init_statement=item.init_statement,
+        import_statement=item.import_statement,
         properties=properties,
         methods=methods,
     )
@@ -293,7 +272,7 @@ def _build_attribute_doc(item: DocumentableObject) -> AttributeDoc:
         description=parsed.description,
         source_file=item.source_file or "",
         line_number=item.line_number,
-        init_statement=item.init_statement,
+        import_statement=item.import_statement,
     )
 
 
@@ -321,7 +300,7 @@ def _collect_class_properties(cls: type[Any]) -> list[PropertyDoc]:
             PropertyDoc(
                 name=name,
                 description=parsed.description,
-                returns=returns,
+                value_description=returns,
             )
         )
 
@@ -351,7 +330,7 @@ def _collect_class_methods(cls: type[Any]) -> list[MethodDoc]:
             MethodDoc(
                 name=name,
                 description=parsed.description,
-                func_name=getattr(member, "__qualname__", name),
+                qualname=getattr(member, "__qualname__", name),
                 signature=_safe_get_signature(member),
                 source_file=_safe_get_source_file(member) or "",
                 line_number=_safe_get_line_number(member),
@@ -662,7 +641,7 @@ def _safe_get_line_number(obj: Any) -> int | None:
     return line_number
 
 
-def _build_init_statement(export: ExportedName) -> str:
+def _build_import_statement(export: ExportedName) -> str:
     """Reconstruct a readable import statement for a public export."""
     if export.source_module is None:
         return ""
@@ -721,7 +700,7 @@ if __name__ == "__main__":
     namespace = exports_data[0]["config_namespace"]
 
     docs_map, missing = build_public_docs_map(
-        object=public_export,
+        object_name=public_export,
         package_name=namespace,
     )
 
