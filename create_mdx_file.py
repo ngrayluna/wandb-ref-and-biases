@@ -48,11 +48,17 @@ def github_import_statement():
 
 def build_arguments_section(arguments: list[dict]) -> str:
     """Build the Arguments markdown section, or empty string if no arguments."""
-    return f"## Args:\n\n{arguments}"
+    if not arguments:
+        return ""
+    formatted_arguments = "".join(format_argument_row(arg) for arg in arguments)
+    return f"## Args:\n\n{formatted_arguments}"
 
-def build_returns_section(returns: str) -> str:
+def build_returns_section(returns: list[dict]) -> str:
     """Build the Returns markdown section, or empty string if no return value."""
-    return f"## Returns:\n\n{returns}"
+    if not returns:
+        return ""
+    formatted_returns = "".join(format_returns_row(ret) for ret in returns)
+    return f"## Returns:\n\n{formatted_returns}"
 
 def build_raises_section(raises: list[dict]) -> str:
     """Build the Raises markdown section, or empty string if no exceptions raised."""
@@ -65,6 +71,43 @@ def build_examples_section(examples: str) -> str:
 def properties_section(properties: list[dict]) -> str:
     """Build the Properties markdown section, or empty string if no visible properties."""
     return "## Properties:\n\n"
+
+
+def format_argument_row(argument: dict) -> str:
+    """Format a single argument row for the Arguments section."""
+    name = argument.get("name", "")
+    description = argument.get("description", "")
+    return f"- **{name}**: {description}\n"
+
+def format_returns_row(return_value: dict) -> str:
+    """Format a single return value row for the Returns section."""
+    type_name = return_value.get("type_name", "")
+    description = return_value.get("description", "")
+    return f"- **{type_name}**: {description}\n"
+
+def format_signature_block(signature: str) -> str:
+    """Return the parameter portion of a signature as a multi-line block.
+
+    Example input:
+        "(entity: 'str | None' = None, project: 'str | None' = None) -> 'Run'"
+
+    Example output:
+        entity: 'str | None' = None,
+        project: 'str | None' = None,
+    """
+    if not signature:
+        return ""
+
+    params_part = signature.split(") ->", maxsplit=1)[0].removeprefix("(")
+
+    return params_part.replace(", ", ",\n")
+
+def build_signature_block(signature: str) -> str:
+    """Build a markdown code block for the function signature."""
+    if not signature:
+        return ""
+    formatted_signature = format_signature_block(signature)
+    return f"```python\n{formatted_signature}\n```"
 
 
 def generate_function_mdx_content(
@@ -85,12 +128,13 @@ def generate_function_mdx_content(
     returns_section = build_returns_section(returns)
     raises_section = build_raises_section(raises)
     examples_section = build_examples_section(examples)
+    signature_block = build_signature_block(signature)
 
     return mdx_function_template.format(
         name=name,
         #namespace=namespace,
         description=description,
-        signature=signature,
+        signature=signature_block,
         arguments_section=arguments_section,
         returns_section=returns_section,
         raises_section=raises_section,
