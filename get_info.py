@@ -73,6 +73,7 @@ class FunctionDoc:
 
     name: str
     qualname: str = ""
+    kind: str = ""
     description: str = ""
     examples: str = ""
     source_file: str = ""
@@ -89,6 +90,7 @@ class ClassDoc:
 
     public_name: str
     qualname: str = ""
+    kind: str = ""
     description: str = ""
     examples: str = ""
     source_file: str = ""
@@ -106,10 +108,12 @@ class AttributeDoc:
     """Documentation for a public attribute-like export."""
 
     name: str
+    kind: str = ""
     description: str = ""
     source_file: str = ""
     line_number: int | None = None
     import_statement: str = ""
+
 
 
 @dataclass(frozen=True, slots=True)
@@ -233,6 +237,7 @@ def _build_function_doc(item: DocumentableObject) -> FunctionDoc:
     return FunctionDoc(
         name=item.public_name,
         qualname=item.qualname or item.public_name,
+        kind=item.kind,
         description=parsed.description,
         examples=parsed.examples,
         source_file=item.source_file or "",
@@ -253,6 +258,7 @@ def _build_class_doc(item: DocumentableObject) -> ClassDoc:
     return ClassDoc(
         public_name=item.public_name,
         qualname=item.qualname or item.public_name,
+        kind=item.kind,
         description=parsed.description,
         examples=parsed.examples,
         source_file=item.source_file or "",
@@ -275,6 +281,7 @@ def _build_attribute_doc(item: DocumentableObject) -> AttributeDoc:
     return AttributeDoc(
         name=item.public_name,
         description=parsed.description,
+        kind=item.kind,
         source_file=item.source_file or "",
         line_number=item.line_number,
         import_statement=item.import_statement,
@@ -698,9 +705,9 @@ def _get_object_kind(obj: Any) -> str:
 
 if __name__ == "__main__":
 
-    #filename = "./sdk_exports.json"
-    filename = "./public_exports.json"
-    entry = 5
+    filename = "./sdk_exports.json"
+    #filename = "./public_exports.json"
+    entry = 3
 
     # Read in JSON file. See sdk_exports.json for expected format.
     with open(filename, "r", encoding="utf-8") as f:
