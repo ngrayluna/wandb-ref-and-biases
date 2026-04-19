@@ -159,11 +159,29 @@ class DocumentableObject:
 
 #######
 
-def resolve_public_exports(
+def resolve_exports(
     package_name: str,
     exports: list[ExportedName],
 ) -> tuple[list[tuple[ExportedName, Any]], list[ExportedName]]:
-    """Resolve parsed exports against the imported package namespace."""
+    """Resolve parsed exports against the imported package namespace.
+    
+    In other words, attempt to find the actual Python objects corresponding
+    to the exported names, so we can inspect them for docs generation.
+
+    Args:
+    - package_name: The name of the package to import for resolution.
+    - exports: Records to resolve; only ``public_name`` is used for
+          lookup, other fields pass through unchanged.
+
+    Returns:
+        ``(resolved, missing)``:
+        - ``resolved``: ``(ExportedName, object)`` pairs for names found.
+        - ``missing``: ``ExportedName`` records not present on the package.
+
+    Example:
+        >>> resolve_exports("wandb", [ExportedName(public_name="Api")])
+        ([(ExportedName(public_name='Api', ...), <class '...Api'>)], [])    
+    """
     module = importlib.import_module(package_name)
 
     resolved: list[tuple[ExportedName, Any]] = []
@@ -185,18 +203,28 @@ def resolve_public_exports(
 # ---------------------------------------------------------------------------
 
 
-def build_public_docs_map(
+def document_exports(
     object_name: str,
     package_name: str,
 ) -> tuple[dict[str, dict[str, Any]], list[ExportedName]]:
     """Build a JSON-serializable mapping of public docs data.
 
+    Args:
+        object_name: Public name as it appears on the package namespace                                                                                                                  
+            (e.g. ``"Api"``, not ``"wandb.apis.public.api.Api"``).
+        package_name: Dotted import path of the package exporting it.
+    
     Returns:
-        A pair of:
-        - a mapping keyed by public export name
-        - a list of exports that could not be resolved at runtime
+        ``(docs_map, missing)``:
+        - ``docs_map``: ``{public_name: doc_dict}``, empty if unresolved.
+        - ``missing``: unresolved ``ExportedName`` records, empty if successfully resolved.
+
+    Example:
+        >>> docs_map, _ = document_exports("Api", "wandb")
+        >>> docs_map["Api"]["kind"]                                                                                                                                                          
+        'class'    
     """
-    resolved, missing = resolve_public_exports(package_name, [ExportedName(public_name=object_name)])
+    resolved, missing = resolve_exports(package_name, [ExportedName(public_name=object_name)])
     documentable_objects = [
         DocumentableObject.from_export(export, obj)
         for export, obj in resolved
@@ -723,7 +751,7 @@ if __name__ == "__main__":
 
     filename = "./sdk_exports.json"
     #filename = "./public_exports.json"
-    entry = 23
+    entry = 19
 
     # Read in JSON file. See sdk_exports.json for expected format.
     with open(filename, "r", encoding="utf-8") as f:
@@ -733,7 +761,7 @@ if __name__ == "__main__":
     public_export = exports_data[entry]["public_name"]
     namespace = exports_data[entry]["config_namespace"]
 
-    docs_map, missing = build_public_docs_map(
+    docs_map, missing = document_exports(
         object_name=public_export,
         package_name=namespace,
     )
