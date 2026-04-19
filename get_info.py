@@ -49,7 +49,7 @@ class PropertyDoc:
 
     name: str
     description: str = ""
-    returns: str = ""
+    type_name: str = ""
 
 
 @dataclass(frozen=True, slots=True)
@@ -176,6 +176,7 @@ def resolve_public_exports(
             )
         else:
             missing.append(export)
+    print(f"Resolved {len(resolved)} exports, {len(missing)} missing.")
 
     return resolved, missing
 
@@ -190,6 +191,10 @@ def build_public_docs_map(
     package_name: str,
 ) -> tuple[dict[str, dict[str, Any]], list[ExportedName]]:
     """Build a JSON-serializable mapping of public docs data.
+
+    Args:
+        object_name: The name of the public object to document.
+        package_name: The name of the package to import for runtime resolution.
 
     Returns:
         A pair of:
@@ -307,14 +312,14 @@ def _collect_class_properties(cls: type[Any]) -> list[PropertyDoc]:
 
         doc = inspect.getdoc(member) or ""
         parsed = _parse_docstring(doc)
-        return_docs = parsed.returns or _build_default_return_docs(member.fget)
-        returns = return_docs[0].description if return_docs else ""
+        fallback = _build_default_return_docs(member.fget)
+        type_name = fallback[0].type_name if fallback else ""
 
         properties.append(
             PropertyDoc(
                 name=name,
                 description=parsed.description,
-                returns=returns,
+                type_name=type_name,
             )
         )
 
@@ -623,8 +628,8 @@ def _build_default_return_docs(obj: Any) -> list[ReturnDoc]:
 
     return [
         ReturnDoc(
-            type_name="return",
-            description=_format_annotation(annotation),
+            type_name=_format_annotation(annotation),
+            description="",
         )
     ]
 
