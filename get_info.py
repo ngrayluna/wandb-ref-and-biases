@@ -49,7 +49,7 @@ class PropertyDoc:
 
     name: str
     description: str = ""
-    value_description: str = ""
+    returns: str = ""
 
 
 @dataclass(frozen=True, slots=True)
@@ -159,11 +159,29 @@ class DocumentableObject:
 
 #######
 
-def resolve_public_exports(
+def resolve_exports(
     package_name: str,
     exports: list[ExportedName],
 ) -> tuple[list[tuple[ExportedName, Any]], list[ExportedName]]:
-    """Resolve parsed exports against the imported package namespace."""
+    """Resolve parsed exports against the imported package namespace.
+    
+    In other words, attempt to find the actual Python objects corresponding
+    to the exported names, so we can inspect them for docs generation.
+
+    Args:
+    - package_name: The name of the package to import for resolution.
+    - exports: Records to resolve; only ``public_name`` is used for
+          lookup, other fields pass through unchanged.
+
+    Returns:
+        ``(resolved, missing)``:
+        - ``resolved``: ``(ExportedName, object)`` pairs for names found.
+        - ``missing``: ``ExportedName`` records not present on the package.
+
+    Example:
+        >>> resolve_exports("wandb", [ExportedName(public_name="Api")])
+        ([(ExportedName(public_name='Api', ...), <class '...Api'>)], [])    
+    """
     module = importlib.import_module(package_name)
 
     resolved: list[tuple[ExportedName, Any]] = []
@@ -185,18 +203,28 @@ def resolve_public_exports(
 # ---------------------------------------------------------------------------
 
 
-def build_public_docs_map(
+def document_exports(
     object_name: str,
     package_name: str,
 ) -> tuple[dict[str, dict[str, Any]], list[ExportedName]]:
     """Build a JSON-serializable mapping of public docs data.
 
+    Args:
+        object_name: Public name as it appears on the package namespace                                                                                                                  
+            (e.g. ``"Api"``, not ``"wandb.apis.public.api.Api"``).
+        package_name: Dotted import path of the package exporting it.
+    
     Returns:
-        A pair of:
-        - a mapping keyed by public export name
-        - a list of exports that could not be resolved at runtime
+        ``(docs_map, missing)``:
+        - ``docs_map``: ``{public_name: doc_dict}``, empty if unresolved.
+        - ``missing``: unresolved ``ExportedName`` records, empty if successfully resolved.
+
+    Example:
+        >>> docs_map, _ = document_exports("Api", "wandb")
+        >>> docs_map["Api"]["kind"]                                                                                                                                                          
+        'class'    
     """
-    resolved, missing = resolve_public_exports(package_name, [ExportedName(public_name=object_name)])
+    resolved, missing = resolve_exports(package_name, [ExportedName(public_name=object_name)])
     documentable_objects = [
         DocumentableObject.from_export(export, obj)
         for export, obj in resolved
@@ -294,26 +322,24 @@ def _build_attribute_doc(item: DocumentableObject) -> AttributeDoc:
 
 ## Note: inspect.getmembers(cls) may include inherited members we don't want.
 def _collect_class_properties(cls: type[Any]) -> list[PropertyDoc]:
-    """Collect public properties from a class."""
+    """Collect public properties defined directly on a class."""
     properties: list[PropertyDoc] = []
 
-    # Future: for name, member in cls.__dict__.items():
-    for name, member in inspect.getmembers(cls):
+    for name, member in cls.__dict__.items():
         if name.startswith("_"):
             continue
 
         if not isinstance(member, property):
             continue
 
-        doc = inspect.getdoc(member) or ""
+        doc = inspect.getdoc(member.fget) or inspect.getdoc(member) or ""
         parsed = _parse_docstring(doc)
-        returns = parsed.returns[0].description if parsed.returns else ""
 
         properties.append(
             PropertyDoc(
                 name=name,
                 description=parsed.description,
-                value_description=returns,
+                returns=_build_property_return_doc(member, parsed),
             )
         )
 
@@ -626,6 +652,24 @@ def _build_default_return_docs(obj: Any) -> list[ReturnDoc]:
         )
     ]
 
+def _build_property_return_doc(
+    prop: property,
+    parsed: ParsedDocstring,
+) -> str:
+    """Build a property's return doc from docstring or getter annotation."""
+    if parsed.returns:
+        first_return = parsed.returns[0]
+        return first_return.description or first_return.type_name
+
+    if prop.fget is None:
+        return ""
+
+    fallback_returns = _build_default_return_docs(prop.fget)
+    if not fallback_returns:
+        return ""
+
+    first_return = fallback_returns[0]
+    return first_return.description or first_return.type_name
 
 def _safe_get_signature(obj: Any) -> str | None:
     """Return a string signature for an object, if available."""
@@ -707,7 +751,7 @@ if __name__ == "__main__":
 
     filename = "./sdk_exports.json"
     #filename = "./public_exports.json"
-    entry = 3
+    entry = 19
 
     # Read in JSON file. See sdk_exports.json for expected format.
     with open(filename, "r", encoding="utf-8") as f:
@@ -717,7 +761,7 @@ if __name__ == "__main__":
     public_export = exports_data[entry]["public_name"]
     namespace = exports_data[entry]["config_namespace"]
 
-    docs_map, missing = build_public_docs_map(
+    docs_map, missing = document_exports(
         object_name=public_export,
         package_name=namespace,
     )
