@@ -49,7 +49,7 @@ class PropertyDoc:
 
     name: str
     description: str = ""
-    value_description: str = ""
+    returns: str = ""
 
 
 @dataclass(frozen=True, slots=True)
@@ -307,13 +307,14 @@ def _collect_class_properties(cls: type[Any]) -> list[PropertyDoc]:
 
         doc = inspect.getdoc(member) or ""
         parsed = _parse_docstring(doc)
-        returns = parsed.returns[0].description if parsed.returns else ""
+        return_docs = parsed.returns or _build_default_return_docs(member.fget)
+        returns = return_docs[0].description if return_docs else ""
 
         properties.append(
             PropertyDoc(
                 name=name,
                 description=parsed.description,
-                value_description=returns,
+                returns=returns,
             )
         )
 
@@ -529,6 +530,7 @@ def _parse_return_block(lines: list[str]) -> list[ReturnDoc]:
             ReturnDoc(
                 type_name=current_name or "",
                 description=_join_description_lines(current_description),
+
             )
         )
 
@@ -707,7 +709,7 @@ if __name__ == "__main__":
 
     filename = "./sdk_exports.json"
     #filename = "./public_exports.json"
-    entry = 3
+    entry = 23
 
     # Read in JSON file. See sdk_exports.json for expected format.
     with open(filename, "r", encoding="utf-8") as f:
