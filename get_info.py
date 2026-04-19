@@ -49,7 +49,7 @@ class PropertyDoc:
 
     name: str
     description: str = ""
-    value_description: str = ""
+    returns: str = ""
 
 
 @dataclass(frozen=True, slots=True)
@@ -294,26 +294,24 @@ def _build_attribute_doc(item: DocumentableObject) -> AttributeDoc:
 
 ## Note: inspect.getmembers(cls) may include inherited members we don't want.
 def _collect_class_properties(cls: type[Any]) -> list[PropertyDoc]:
-    """Collect public properties from a class."""
+    """Collect public properties defined directly on a class."""
     properties: list[PropertyDoc] = []
 
-    # Future: for name, member in cls.__dict__.items():
-    for name, member in inspect.getmembers(cls):
+    for name, member in cls.__dict__.items():
         if name.startswith("_"):
             continue
 
         if not isinstance(member, property):
             continue
 
-        doc = inspect.getdoc(member) or ""
+        doc = inspect.getdoc(member.fget) or inspect.getdoc(member) or ""
         parsed = _parse_docstring(doc)
-        returns = parsed.returns[0].description if parsed.returns else ""
 
         properties.append(
             PropertyDoc(
                 name=name,
                 description=parsed.description,
-                value_description=returns,
+                returns=_build_property_return_doc(member, parsed),
             )
         )
 
@@ -626,6 +624,24 @@ def _build_default_return_docs(obj: Any) -> list[ReturnDoc]:
         )
     ]
 
+def _build_property_return_doc(
+    prop: property,
+    parsed: ParsedDocstring,
+) -> str:
+    """Build a property's return doc from docstring or getter annotation."""
+    if parsed.returns:
+        first_return = parsed.returns[0]
+        return first_return.description or first_return.type_name
+
+    if prop.fget is None:
+        return ""
+
+    fallback_returns = _build_default_return_docs(prop.fget)
+    if not fallback_returns:
+        return ""
+
+    first_return = fallback_returns[0]
+    return first_return.description or first_return.type_name
 
 def _safe_get_signature(obj: Any) -> str | None:
     """Return a string signature for an object, if available."""
@@ -707,7 +723,7 @@ if __name__ == "__main__":
 
     filename = "./sdk_exports.json"
     #filename = "./public_exports.json"
-    entry = 3
+    entry = 23
 
     # Read in JSON file. See sdk_exports.json for expected format.
     with open(filename, "r", encoding="utf-8") as f:
