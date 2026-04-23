@@ -140,30 +140,47 @@ def format_signature_block(signature: str) -> str:
     return params_part.replace(", ", ",\n")
 
 
-def generate_class_mdx_content(
-        name: str = "",
-        description: str = "",
-        signature: str = "",
-        arguments: list[dict] = None,
-        returns: str = "",
-        properties: list[dict] = None,
-        methods_section: list[dict] = None,
-        github_button: str = "",
+# def generate_class_mdx_content(
+#         name: str = "",
+#         description: str = "",
+#         signature: str = "",
+#         arguments: list[dict] = None,
+#         returns: str = "",
+#         properties: list[dict] = None,
+#         methods_section: list[dict] = None,
+#         github_button: str = "",
 
-):
-    """Generate MDX content for a class using the mdx_class_template."""
+# ):
+#     """Generate MDX content for a class using the mdx_class_template."""
 
+#     return mdx_class_template.format(
+#         name=name,
+#         description=description,
+#         signature=build_signature_block(signature),
+#         arguments_section=build_arguments_section(arguments),
+#         returns_section=build_returns_section(returns),
+#         properties_section=build_properties_section(properties),
+#         methods_section=build_methods_section(methods_section),
+#         import_statements=github_import_statement(),
+#         github_path=github_button,
+#     )
+
+def generate_class_mdx_content(object: dict, release_tag: Optional[str] = None) -> str:
     return mdx_class_template.format(
-        name=name,
-        description=description,
-        signature=build_signature_block(signature),
-        arguments_section=build_arguments_section(arguments),
-        returns_section=build_returns_section(returns),
-        properties_section=build_properties_section(properties),
-        methods_section=build_methods_section(methods_section),
+        name=object.get("public_name", ""),
+        description=object.get("description", ""),
+        signature=build_signature_block(object.get("signature", ""),),
+        arguments_section=build_arguments_section(object.get("arguments", []),),
+        returns_section=build_returns_section(object.get("returns", "")),
+        properties_section=build_properties_section(object.get("properties", [])),
+        methods_section=build_methods_section(object.get("methods", [])),
         import_statements=github_import_statement(),
-        github_path=github_button,
+        github_path=format_github_button(
+                source_file=object.get("source_file", ""),
+                line_number=object.get("line_number", 0),
+                release_tag=release_tag)
     )
+
 
 
 def generate_function_mdx_content(
@@ -207,20 +224,8 @@ def main(args):
     item_key = next(iter(json_file), None)
     
     if json_file[item_key].get("kind") == "class":
-        template = generate_class_mdx_content(
-            name=json_file[item_key].get("public_name", ""),
-            description=json_file[item_key].get("description", ""),
-            signature=json_file[item_key].get("signature", ""),
-            arguments=json_file[item_key].get("arguments", []),
-            returns=json_file[item_key].get("returns", ""),
-            properties=json_file[item_key].get("properties", []),
-            methods_section=json_file[item_key].get("methods", []),
-            github_button=format_github_button(
-                source_file=json_file[item_key].get("source_file", ""),
-                line_number=json_file[item_key].get("line_number", 0),
-                release_tag=args.release_tag,
-            )
-        )
+        object = json_file[item_key]
+        template = generate_class_mdx_content(object, release_tag=args.release_tag)
     elif json_file[item_key].get("kind") == "function":
         template = generate_function_mdx_content(
             name=json_file[item_key].get("name", ""),
