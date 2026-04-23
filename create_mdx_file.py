@@ -62,16 +62,53 @@ def build_returns_section(returns: list[dict]) -> str:
 
 def build_raises_section(raises: list[dict]) -> str:
     """Build the Raises markdown section, or empty string if no exceptions raised."""
-    return f"## Raises:\n\n{raises}"
+    if not raises:
+        return ""
+    formatted_raises = "".join(format_raises_row(raise_) for raise_ in raises)
+    return f"## Raises:\n\n{formatted_raises}"
 
 def build_examples_section(examples: str) -> str:
     """Build the Examples markdown section, or empty string if no examples."""
     return f"## Examples:\n\n{examples}"
 
-def properties_section(properties: list[dict]) -> str:
-    """Build the Properties markdown section, or empty string if no visible properties."""
-    return "## Properties:\n\n"
+def build_signature_block(signature: str) -> str:
+    """Build a markdown code block for the function signature."""
+    if not signature:
+        return ""
+    formatted_signature = format_signature_block(signature)
+    return f"```python\n{formatted_signature}\n```"
 
+def build_methods_section(methods: list[dict]) -> str:
+    """Build the Methods markdown section for a class, or empty string if no methods."""
+    if not methods:
+        return ""
+    formatted_methods = "".join(format_methods_row(method) for method in methods)
+    return f"## Methods:\n\n{formatted_methods}"
+
+def build_properties_section(properties: list[dict]) -> str:
+    """Build the Properties markdown section, or empty string if no visible properties."""
+    if not properties:
+        return ""
+    formatted_properties = "".join(format_property_row(prop) for prop in properties)
+    return f"## Properties:\n\n{formatted_properties}"
+
+def format_raises_row(raise_: dict) -> str:
+    """Format a single exception row for the Raises section."""
+    type_name = raise_.get("type_name", "")
+    description = raise_.get("description", "")
+    return f"- **{type_name}**: {description}\n"
+
+def format_methods_row(method: dict) -> str:
+    """Format a single method row for the Methods section."""
+    name = method.get("name", "")
+    description = method.get("description", "")
+    return f"### {name}\n\n{description}\n\n"
+
+def format_property_row(property: dict) -> str:
+    """Format a single property row for the Properties section."""
+    name = property.get("name", "")
+    description = property.get("description", "")
+    return f"### {name}\n\n{description}\n\n"
 
 def format_argument_row(argument: dict) -> str:
     """Format a single argument row for the Arguments section."""
@@ -102,12 +139,31 @@ def format_signature_block(signature: str) -> str:
 
     return params_part.replace(", ", ",\n")
 
-def build_signature_block(signature: str) -> str:
-    """Build a markdown code block for the function signature."""
-    if not signature:
-        return ""
-    formatted_signature = format_signature_block(signature)
-    return f"```python\n{formatted_signature}\n```"
+
+def generate_class_mdx_content(
+        name: str = "",
+        description: str = "",
+        signature: str = "",
+        arguments: list[dict] = None,
+        returns: str = "",
+        properties: list[dict] = None,
+        methods_section: list[dict] = None,
+        github_button: str = "",
+
+):
+    """Generate MDX content for a class using the mdx_class_template."""
+
+    return mdx_class_template.format(
+        name=name,
+        description=description,
+        signature=build_signature_block(signature),
+        arguments_section=build_arguments_section(arguments),
+        returns_section=build_returns_section(returns),
+        properties_section=build_properties_section(properties),
+        methods_section=build_methods_section(methods_section),
+        import_statements=github_import_statement(),
+        github_path=github_button,
+    )
 
 
 def generate_function_mdx_content(
@@ -122,7 +178,6 @@ def generate_function_mdx_content(
     github_button: str,
 ) -> str:
     """Generate MDX content for a function using the mdx_function_template."""
-    import_statements = github_import_statement()
 
     arguments_section = build_arguments_section(arguments)
     returns_section = build_returns_section(returns)
@@ -139,7 +194,7 @@ def generate_function_mdx_content(
         returns_section=returns_section,
         raises_section=raises_section,
         examples_section=examples_section,
-        import_statements=import_statements,
+        import_statements=github_import_statement(),
         github_path=github_button,
     )
 
@@ -152,8 +207,20 @@ def main(args):
     item_key = next(iter(json_file), None)
     
     if json_file[item_key].get("kind") == "class":
-        # template = generate_class_mdx_content()
-        print("Class MDX generation not implemented yet.")
+        template = generate_class_mdx_content(
+            name=json_file[item_key].get("public_name", ""),
+            description=json_file[item_key].get("description", ""),
+            signature=json_file[item_key].get("signature", ""),
+            arguments=json_file[item_key].get("arguments", []),
+            returns=json_file[item_key].get("returns", ""),
+            properties=json_file[item_key].get("properties", []),
+            methods_section=json_file[item_key].get("methods", []),
+            github_button=format_github_button(
+                source_file=json_file[item_key].get("source_file", ""),
+                line_number=json_file[item_key].get("line_number", 0),
+                release_tag=args.release_tag,
+            )
+        )
     elif json_file[item_key].get("kind") == "function":
         template = generate_function_mdx_content(
             name=json_file[item_key].get("name", ""),
@@ -175,8 +242,9 @@ def main(args):
 
     # Loop through each command/class and generate MDX content
     print(f"Created MDX content for {item_key}:")
-    print(template)
-
+    with open(f"{args.output_dir}/{item_key}.mdx", 'w', encoding='utf-8') as f:
+        f.write(template)
+    
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Generate MDX documentation files for Click commands.")
     parser.add_argument("--source-info", default="source_info.json", help="Path to JSON file with command metadata.")
