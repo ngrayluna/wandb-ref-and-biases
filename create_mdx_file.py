@@ -89,7 +89,10 @@ def build_properties_section(properties: list[dict]) -> str:
     """Build the Properties markdown section, or empty string if no visible properties."""
     if not properties:
         return ""
-    formatted_properties = "".join(format_property_row(prop) for prop in properties)
+
+    formatted_properties = "".join(format_property_row(prop) for prop in properties if not internal_use_only(prop))
+    if not formatted_properties:
+        return ""
     return f"## Properties:\n\n{formatted_properties}"
 
 def format_raises_row(raise_: dict) -> str:
@@ -175,6 +178,11 @@ def generate_function_mdx_content(object: dict, release_tag: Optional[str] = Non
                 release_tag=release_tag)
     )
 
+
+def internal_use_only(object: dict) -> bool:
+    """Check if the object is marked for internal use based on the presence of 'lazydoc' in the description."""
+    description = object.get("description", "")
+    return "lazydoc" in description
 
 def main(args):
 
