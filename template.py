@@ -28,7 +28,7 @@ title: {name}
 ## Template for Python classes
 
 mdx_class_template = """---
-title: wandb {name}
+title: {name}
 ---
 
 {import_statements}
