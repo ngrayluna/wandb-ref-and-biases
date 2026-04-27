@@ -1,7 +1,9 @@
 """
 Generate .mdx files for Python SDK.
 """
+import os
 import argparse
+import glob
 import json
 from typing import Optional
 
@@ -50,7 +52,7 @@ def build_arguments_section(arguments: list[dict]) -> str:
     """Build the Arguments markdown section, or empty string if no arguments."""
     if not arguments:
         return ""
-    formatted_arguments = "".join(format_argument_row(arg) for arg in arguments)
+    formatted_arguments = "".join(format_argument_row(arg) for arg in arguments if not internal_use_only(arg))
     return f"## Args:\n\n{formatted_arguments}"
 
 def build_returns_section(returns: list[dict]) -> str:
@@ -82,14 +84,21 @@ def build_methods_section(methods: list[dict]) -> str:
     """Build the Methods markdown section for a class, or empty string if no methods."""
     if not methods:
         return ""
-    formatted_methods = "".join(format_methods_row(method) for method in methods)
+    formatted_methods = "".join(format_methods_row(method) for method in methods if not internal_use_only(method))
     return f"## Methods:\n\n{formatted_methods}"
 
 def build_properties_section(properties: list[dict]) -> str:
-    """Build the Properties markdown section, or empty string if no visible properties."""
+    """Build the Properties mardown section for a class, or empty string if no properties.
+
+    Properties marked for internal use only (identified by 'lazydoc' in description) are
+    filtered out and not included in the output.
+    """
     if not properties:
         return ""
-    formatted_properties = "".join(format_property_row(prop) for prop in properties)
+
+    formatted_properties = "".join(format_property_row(prop) for prop in properties if not internal_use_only(prop))
+    if not formatted_properties:
+        return ""
     return f"## Properties:\n\n{formatted_properties}"
 
 def format_raises_row(raise_: dict) -> str:
@@ -176,30 +185,43 @@ def generate_function_mdx_content(object: dict, release_tag: Optional[str] = Non
     )
 
 
+def internal_use_only(object: dict) -> bool:
+    """Check if the object is marked for internal use based on the presence of 'lazydoc' in the description.
+
+    Returns:
+        bool: True if 'lazydoc' is found in the description, indicating internal use only; False otherwise.
+    """
+    description = object.get("description", "")
+    return "lazydoc" in description
+
 def main(args):
 
-    ### Main logic to read source info and generate MDX files
-    with open(args.source_info, 'r', encoding='utf-8') as file:
-        json_file = json.load(file)
+    for filename in glob.glob(os.path.join(args.source_info, '*.json')):
+        with open(filename, 'r', encoding='utf-8') as file:
+            json_file = json.load(file)
 
-    item_key = next(iter(json_file), None)
-    object = json_file[item_key]
+    # # Main logic to read source info and generate MDX files
+    # with open(args.source_info, 'r', encoding='utf-8') as file:
+    #     json_file = json.load(file)
 
-    if object.get("kind") == "class":
-        template = generate_class_mdx_content(object, release_tag=args.release_tag)
-    elif object.get("kind") == "function":
-        template = generate_function_mdx_content(object, release_tag=args.release_tag)
-    else:
-        raise ValueError(f"Unsupported item kind: {object.get('kind')}")
+        item_key = next(iter(json_file), None)
+        object = json_file[item_key]
 
-    # Loop through each command/class and generate MDX content
-    print(f"Created MDX content for {item_key}:")
-    with open(f"{args.output_dir}/{item_key}.mdx", 'w', encoding='utf-8') as f:
-        f.write(template)
+        if object.get("kind") == "class":
+            template = generate_class_mdx_content(object, release_tag=args.release_tag)
+        elif object.get("kind") == "function":
+            template = generate_function_mdx_content(object, release_tag=args.release_tag)
+        else:
+            raise ValueError(f"Unsupported item kind: {object.get('kind')}")
+
+        # Loop through each command/class and generate MDX content
+        print(f"Created MDX content for {item_key}")
+        with open(f"{args.output_dir}/{item_key}.mdx", 'w', encoding='utf-8') as f:
+            f.write(template)
     
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Generate MDX documentation files for Click commands.")
-    parser.add_argument("--source-info", default="source_info.json", help="Path to JSON file with command metadata.")
+    parser.add_argument("--source-info", required=True, help="Path to JSON directory with command metadata.")
     parser.add_argument("--output-dir", default="output", help="Directory to write generated MDX files.")
     parser.add_argument("--release-tag", default=None, help="Git tag for GitHub source URLs (e.g., 'v0.18.3'). Defaults to 'main'.")
     main(parser.parse_args())

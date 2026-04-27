@@ -1,3 +1,10 @@
+"""
+Find and inspect public objects from the package namespace, parse their
+docstrings, and build structured docsdata for use in MDX generation.
+
+Usage
+    python get_info.py
+"""
 from __future__ import annotations
 
 import json
@@ -33,6 +40,7 @@ class ArgumentDoc:
 
     name: str
     description: str = ""
+    internal_use: bool = False
 
 
 @dataclass(frozen=True, slots=True)
@@ -50,6 +58,7 @@ class PropertyDoc:
     name: str
     description: str = ""
     returns: str = ""
+    internal_use: bool = False
 
 
 @dataclass(frozen=True, slots=True)
@@ -73,6 +82,7 @@ class FunctionDoc:
 
     name: str
     qualname: str = ""
+    defining_module: str | None = None
     kind: str = ""
     description: str = ""
     examples: str = ""
@@ -82,6 +92,7 @@ class FunctionDoc:
     signature: str | None = None
     arguments: list[ArgumentDoc] = field(default_factory=list)
     returns: list[ReturnDoc] = field(default_factory=list)
+    internal_use: bool = False
 
 
 @dataclass(frozen=True, slots=True)
@@ -90,6 +101,8 @@ class ClassDoc:
 
     public_name: str
     qualname: str = ""
+    defining_module: str | None = None
+    internal_use: bool = False
     kind: str = ""
     description: str = ""
     examples: str = ""
@@ -100,6 +113,7 @@ class ClassDoc:
     arguments: list[ArgumentDoc] = field(default_factory=list)
     properties: list[PropertyDoc] = field(default_factory=list)
     methods: list[MethodDoc] = field(default_factory=list)
+    
 
 
 
@@ -265,6 +279,7 @@ def _build_function_doc(item: DocumentableObject) -> FunctionDoc:
     return FunctionDoc(
         name=item.public_name,
         qualname=item.qualname or item.public_name,
+        defining_module=item.defining_module,
         kind=item.kind,
         description=parsed.description,
         examples=parsed.examples,
@@ -274,6 +289,7 @@ def _build_function_doc(item: DocumentableObject) -> FunctionDoc:
         signature=item.signature,
         arguments=arguments,
         returns=returns,
+        internal_use=_check_lazydoc(parsed.description)
     )
 
 
@@ -286,6 +302,8 @@ def _build_class_doc(item: DocumentableObject) -> ClassDoc:
     return ClassDoc(
         public_name=item.public_name,
         qualname=item.qualname or item.public_name,
+        defining_module=item.defining_module,
+        internal_use=_check_lazydoc(parsed.description),
         kind=item.kind,
         description=parsed.description,
         examples=parsed.examples,
@@ -313,6 +331,7 @@ def _build_attribute_doc(item: DocumentableObject) -> AttributeDoc:
         source_file=item.source_file or "",
         line_number=item.line_number,
         import_statement=item.import_statement,
+        internal_use=_check_lazydoc(parsed.description)
     )
 
 
@@ -340,6 +359,7 @@ def _collect_class_properties(cls: type[Any]) -> list[PropertyDoc]:
                 name=name,
                 description=parsed.description,
                 returns=_build_property_return_doc(member, parsed),
+                internal_use=_check_lazydoc(parsed.description)
             )
         )
 
@@ -488,6 +508,7 @@ def _parse_argument_block(lines: list[str]) -> list[ArgumentDoc]:
                     ArgumentDoc(
                         name=current_name,
                         description=_join_description_lines(current_description),
+                        internal_use=_check_lazydoc(_join_description_lines(current_description))
                     )
                 )
 
@@ -504,6 +525,7 @@ def _parse_argument_block(lines: list[str]) -> list[ArgumentDoc]:
             ArgumentDoc(
                 name=current_name,
                 description=_join_description_lines(current_description),
+                internal_use=_check_lazydoc(_join_description_lines(current_description))
             )
         )
 
@@ -729,6 +751,10 @@ def _format_annotation(annotation: Any) -> str:
     return str(annotation)
 
 
+def _check_lazydoc(description: str) -> bool:
+    """Return True if the description contains a lazydoc directive."""
+    return "lazydoc" in description
+
 def _get_object_kind(obj: Any) -> str:
     """Return a stable, human-readable kind for an object."""
     if inspect.isclass(obj):
@@ -751,28 +777,33 @@ if __name__ == "__main__":
 
     filename = "./sdk_exports.json"
     #filename = "./public_exports.json"
-    entry = 19
+    entry = 18
 
     # Read in JSON file. See sdk_exports.json for expected format.
     with open(filename, "r", encoding="utf-8") as f:
         exports_data = json.load(f)
 
-    # For now, let's just look at the first export
-    public_export = exports_data[entry]["public_name"]
-    namespace = exports_data[entry]["config_namespace"]
 
-    docs_map, missing = document_exports(
-        object_name=public_export,
-        package_name=namespace,
-    )
+    # Iterate over the exports and document them, writing out a JSON file for each. 
+    for entry in exports_data:
+        
+        public_export = entry["public_name"]
+        namespace = entry["config_namespace"]
 
-    output_path = Path(f"./docs_json/{public_export}_docs.json")
-    output_path.write_text(
-        json.dumps(docs_map, indent=2, ensure_ascii=False) + "\n",
-        encoding="utf-8",
-    )
+        print(f"\nDocumenting {namespace}.{public_export}...")
 
-    if missing:
-        print("\nMissing exports:")
-        for export in missing:
-            print(f"  - {export.public_name}")
+        docs_map, missing = document_exports(
+            object_name=public_export,
+            package_name=namespace,
+        )
+
+        output_path = Path(f"./docs_json/{public_export}_docs.json")
+        output_path.write_text(
+            json.dumps(docs_map, indent=2, ensure_ascii=False) + "\n",
+            encoding="utf-8",
+        )
+
+        if missing:
+            print("\nMissing exports:")
+            for export in missing:
+                print(f"  - {export.public_name}")
