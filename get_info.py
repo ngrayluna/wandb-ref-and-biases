@@ -794,7 +794,7 @@ def main(args):
             package_name=namespace,
         )
 
-        output_path = Path(args.output_dir) / f"{public_export}_docs.json"
+        output_path = Path(args.output_dir) / f"{namespace}.{public_export}.json"
         output_path.write_text(
             json.dumps(docs_map, indent=2, ensure_ascii=False) + "\n",
             encoding="utf-8",

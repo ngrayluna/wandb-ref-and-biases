@@ -153,6 +153,8 @@ def generate_class_mdx_content(object: dict, release_tag: Optional[str] = None) 
     """Generate MDX content for a class object using the class template."""
     return mdx_class_template.format(
         name=object.get("public_name", ""),
+        kind=object.get("kind", ""),
+        namespace=object.get("defining_module", ""),
         description=object.get("description", ""),
         signature=build_signature_block(object.get("signature", ""),),
         arguments_section=build_arguments_section(object.get("arguments", []),),
@@ -171,6 +173,8 @@ def generate_function_mdx_content(object: dict, release_tag: Optional[str] = Non
     """Generate MDX content for a function object using the function template."""
     return mdx_function_template.format(
         name=object.get("name", ""),
+        kind=object.get("kind", ""),
+        namespace=object.get("defining_module", ""),
         description=object.get("description", ""),
         signature=build_signature_block(object.get("signature", "")),
         arguments_section=build_arguments_section(object.get("arguments", [])),
@@ -200,8 +204,6 @@ def main(args):
         with open(filename, 'r', encoding='utf-8') as file:
             json_file = json.load(file)
 
-        print(f"Processing {filename}...")        
-
         item_key = next(iter(json_file), None)
         if not item_key:
             print(f"No items found in {filename}, skipping.")
@@ -215,11 +217,11 @@ def main(args):
         else:
             raise ValueError(f"Unsupported item kind: {object.get('kind')}")
 
-        # Loop through each command/class and generate MDX content
-        # print(f"Created MDX content for {item_key}")
-        with open(f"{args.output_dir}/{item_key}.mdx", 'w', encoding='utf-8') as f:
+        print(f"Created MDX content for {item_key}")
+        with open(f"{args.output_dir}/{item_key}.{object.get('defining_module', '').replace('.', '_')}.mdx", 'w', encoding='utf-8') as f:
             f.write(template)
-    
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Generate MDX documentation files for Click commands.")
     parser.add_argument("--source-info", required=True, help="Path to JSON directory with command metadata.")

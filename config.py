@@ -16,5 +16,12 @@ SOURCE = {
             "__init__.py": BASE_DIR / "wandb" / "wandb" / "apis" / "public" / "__init__.py",
             "__init__.pyi": None
         }
-    },         
+    },
+    "AUTOMATIONS": {
+        "namespace": "wandb.automations",
+        "pckg_init_file": {
+            "__init__.py": BASE_DIR / "wandb" / "wandb" / "automations" / "__init__.py",
+            "__init__.pyi": None
+        }      
     }
+}

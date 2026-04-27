@@ -4,6 +4,8 @@ Templates for generating MDX documentation files for Click commands."""
 ## Template for individual functions
 mdx_function_template = """---
 title: {name}
+kind: {kind}
+namespace: {namespace}
 ---
 
 {import_statements}
@@ -29,6 +31,8 @@ title: {name}
 
 mdx_class_template = """---
 title: {name}
+kind: {kind}
+namespace: {namespace}
 ---
 
 {import_statements}
