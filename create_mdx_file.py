@@ -1,7 +1,9 @@
 """
 Generate .mdx files for Python SDK.
 """
+import os
 import argparse
+import glob
 import json
 from typing import Optional
 
@@ -194,28 +196,32 @@ def internal_use_only(object: dict) -> bool:
 
 def main(args):
 
-    ### Main logic to read source info and generate MDX files
-    with open(args.source_info, 'r', encoding='utf-8') as file:
-        json_file = json.load(file)
+    for filename in glob.glob(os.path.join(args.source_info, '*.json')):
+        with open(filename, 'r', encoding='utf-8') as file:
+            json_file = json.load(file)
 
-    item_key = next(iter(json_file), None)
-    object = json_file[item_key]
+    # # Main logic to read source info and generate MDX files
+    # with open(args.source_info, 'r', encoding='utf-8') as file:
+    #     json_file = json.load(file)
 
-    if object.get("kind") == "class":
-        template = generate_class_mdx_content(object, release_tag=args.release_tag)
-    elif object.get("kind") == "function":
-        template = generate_function_mdx_content(object, release_tag=args.release_tag)
-    else:
-        raise ValueError(f"Unsupported item kind: {object.get('kind')}")
+        item_key = next(iter(json_file), None)
+        object = json_file[item_key]
 
-    # Loop through each command/class and generate MDX content
-    print(f"Created MDX content for {item_key}:")
-    with open(f"{args.output_dir}/{item_key}.mdx", 'w', encoding='utf-8') as f:
-        f.write(template)
+        if object.get("kind") == "class":
+            template = generate_class_mdx_content(object, release_tag=args.release_tag)
+        elif object.get("kind") == "function":
+            template = generate_function_mdx_content(object, release_tag=args.release_tag)
+        else:
+            raise ValueError(f"Unsupported item kind: {object.get('kind')}")
+
+        # Loop through each command/class and generate MDX content
+        print(f"Created MDX content for {item_key}")
+        with open(f"{args.output_dir}/{item_key}.mdx", 'w', encoding='utf-8') as f:
+            f.write(template)
     
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Generate MDX documentation files for Click commands.")
-    parser.add_argument("--source-info", default="source_info.json", help="Path to JSON file with command metadata.")
+    parser.add_argument("--source-info", required=True, help="Path to JSON directory with command metadata.")
     parser.add_argument("--output-dir", default="output", help="Directory to write generated MDX files.")
     parser.add_argument("--release-tag", default=None, help="Git tag for GitHub source URLs (e.g., 'v0.18.3'). Defaults to 'main'.")
     main(parser.parse_args())

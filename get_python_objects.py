@@ -1,4 +1,10 @@
 """
+Generates JSON files for each namespace in config.SOURCE.
+
+Reads in the __init__.py (or .pyi) files defined in config.SOURCE, parses out
+the publicly exported names and their provenance (source module and name),
+and writes this information to JSON files in the output directory.
+
 Example AST from parsing wand.public.apis __init__.py file.
 
 ```text
@@ -24,6 +30,9 @@ Module(
         level=0),          
     ...,
 )
+
+Usage:
+    python get_python_objects.py --output-dir=./output
 """
 from __future__ import annotations
 

@@ -1,3 +1,10 @@
+"""
+Find and inspect public objects from the package namespace, parse their
+docstrings, and build structured docsdata for use in MDX generation.
+
+Usage
+    python get_info.py
+"""
 from __future__ import annotations
 
 import json
@@ -75,6 +82,7 @@ class FunctionDoc:
 
     name: str
     qualname: str = ""
+    defining_module: str | None = None
     kind: str = ""
     description: str = ""
     examples: str = ""
@@ -93,6 +101,8 @@ class ClassDoc:
 
     public_name: str
     qualname: str = ""
+    defining_module: str | None = None
+    internal_use: bool = False
     kind: str = ""
     description: str = ""
     examples: str = ""
@@ -103,7 +113,7 @@ class ClassDoc:
     arguments: list[ArgumentDoc] = field(default_factory=list)
     properties: list[PropertyDoc] = field(default_factory=list)
     methods: list[MethodDoc] = field(default_factory=list)
-    internal_use: bool = False
+    
 
 
 
@@ -269,6 +279,7 @@ def _build_function_doc(item: DocumentableObject) -> FunctionDoc:
     return FunctionDoc(
         name=item.public_name,
         qualname=item.qualname or item.public_name,
+        defining_module=item.defining_module,
         kind=item.kind,
         description=parsed.description,
         examples=parsed.examples,
@@ -291,6 +302,7 @@ def _build_class_doc(item: DocumentableObject) -> ClassDoc:
     return ClassDoc(
         public_name=item.public_name,
         qualname=item.qualname or item.public_name,
+        defining_module=item.defining_module,
         internal_use=_check_lazydoc(parsed.description),
         kind=item.kind,
         description=parsed.description,
