@@ -1,3 +1,4 @@
 # W&B Python SDK Doc Generator
 
-<img width="1670" height="447" alt="workflow_diagram" src="https://github.com/user-attachments/assets/706772e7-5471-44ab-9be5-c0f3e8721e41" />
+<img width="1605" height="679" alt="workflow_diagram" src="https://github.com/user-attachments/assets/e91520ee-c3d8-4c93-8ba2-37cd1980bc03" />
+
