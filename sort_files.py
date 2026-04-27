@@ -1,19 +1,9 @@
 # Main directory for the Python SDK generator. Contains scripts to parse Python source files, extract public API information, and generate MDX documentation files.
-
-
-
 """
+Sorts generated MDX files into categories based on their metadata.
 
-Global functions
-    if kind == "function" and "wandb.sdk" in "namespace"
-Data Types
-    if "wandb.sdk.data_types" in "namespace"
-Experiments
-    if kind == "class" and "wandb.sdk" in "namespace"
-Automations
-Custom Charts
-Public API
-    if "wandb.apis.public" in "namespace"
+Usage:
+    python sort_files.py --source-directory mdx_output/ --output ./python
 """
 import argparse
 import os
@@ -77,8 +67,6 @@ def main(args):
         destination_path = os.path.join(args.output, category, os.path.basename(filename))
         os.rename(filename, destination_path)
         print(f"Moved {os.path.basename(filename)} to {category}/")
-
-
 
 
 if __name__ == "__main__":
