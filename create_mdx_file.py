@@ -200,13 +200,14 @@ def main(args):
         with open(filename, 'r', encoding='utf-8') as file:
             json_file = json.load(file)
 
-    # # Main logic to read source info and generate MDX files
-    # with open(args.source_info, 'r', encoding='utf-8') as file:
-    #     json_file = json.load(file)
+        print(f"Processing {filename}...")        
 
         item_key = next(iter(json_file), None)
-        object = json_file[item_key]
+        if not item_key:
+            print(f"No items found in {filename}, skipping.")
+            continue
 
+        object = json_file[item_key]
         if object.get("kind") == "class":
             template = generate_class_mdx_content(object, release_tag=args.release_tag)
         elif object.get("kind") == "function":
@@ -215,7 +216,7 @@ def main(args):
             raise ValueError(f"Unsupported item kind: {object.get('kind')}")
 
         # Loop through each command/class and generate MDX content
-        print(f"Created MDX content for {item_key}")
+        # print(f"Created MDX content for {item_key}")
         with open(f"{args.output_dir}/{item_key}.mdx", 'w', encoding='utf-8') as f:
             f.write(template)
     

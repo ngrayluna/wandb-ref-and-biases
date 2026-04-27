@@ -6,7 +6,7 @@ Usage
     python get_info.py
 """
 from __future__ import annotations
-
+import argparse
 import json
 
 import importlib
@@ -773,11 +773,8 @@ def _get_object_kind(obj: Any) -> str:
 # ---------------------------------------------------------------------------
 
 
-if __name__ == "__main__":
-
-    filename = "./sdk_exports.json"
-    #filename = "./public_exports.json"
-    entry = 18
+def main(args):
+    filename = args.input_file
 
     # Read in JSON file. See sdk_exports.json for expected format.
     with open(filename, "r", encoding="utf-8") as f:
@@ -797,7 +794,7 @@ if __name__ == "__main__":
             package_name=namespace,
         )
 
-        output_path = Path(f"./docs_json/{public_export}_docs.json")
+        output_path = Path(args.output_dir) / f"{public_export}_docs.json"
         output_path.write_text(
             json.dumps(docs_map, indent=2, ensure_ascii=False) + "\n",
             encoding="utf-8",
@@ -807,3 +804,9 @@ if __name__ == "__main__":
             print("\nMissing exports:")
             for export in missing:
                 print(f"  - {export.public_name}")
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="Get object information.")
+    parser.add_argument("--output-dir", required=False, default="./docs_json", help="Directory to write output JSON files.")
+    parser.add_argument("--input-file", help="Path to input JSON file with exports to document.")
+    main(parser.parse_args())
