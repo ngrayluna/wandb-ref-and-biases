@@ -771,22 +771,27 @@ if __name__ == "__main__":
     with open(filename, "r", encoding="utf-8") as f:
         exports_data = json.load(f)
 
-    # For now, let's just look at the first export
-    public_export = exports_data[entry]["public_name"]
-    namespace = exports_data[entry]["config_namespace"]
 
-    docs_map, missing = document_exports(
-        object_name=public_export,
-        package_name=namespace,
-    )
+    # Iterate over the exports and document them, writing out a JSON file for each. 
+    for entry in exports_data:
+        
+        public_export = entry["public_name"]
+        namespace = entry["config_namespace"]
 
-    output_path = Path(f"./docs_json/{public_export}_docs.json")
-    output_path.write_text(
-        json.dumps(docs_map, indent=2, ensure_ascii=False) + "\n",
-        encoding="utf-8",
-    )
+        print(f"\nDocumenting {namespace}.{public_export}...")
 
-    if missing:
-        print("\nMissing exports:")
-        for export in missing:
-            print(f"  - {export.public_name}")
+        docs_map, missing = document_exports(
+            object_name=public_export,
+            package_name=namespace,
+        )
+
+        output_path = Path(f"./docs_json/{public_export}_docs.json")
+        output_path.write_text(
+            json.dumps(docs_map, indent=2, ensure_ascii=False) + "\n",
+            encoding="utf-8",
+        )
+
+        if missing:
+            print("\nMissing exports:")
+            for export in missing:
+                print(f"  - {export.public_name}")
