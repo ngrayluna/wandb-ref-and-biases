@@ -58,24 +58,7 @@ def main(args):
     create_directories(root_directory)
 
     # Step 2. Read each mdx file, extract metadata, and move to appropriate directory
-    # for filename in os.listdir(args.source_directory):
-    #     if filename.endswith(".mdx"):
-    #         filepath = os.path.join(args.source_directory, filename)
-    #         post = frontmatter.load(filepath)
-    #         metadata = post.metadata
-
-    #         kind = metadata.get("kind", "")
-    #         namespace = metadata.get("namespace", "")
-    #         print(f"Processing {filename}: kind={kind}, namespace={namespace}")
-
-    #         category = sort_logic(kind, namespace)
-    #         destination_path = os.path.join(root_directory, category, filename)
-    #         os.rename(filepath, destination_path)
-    #         print(f"Moved {filename} to {category}/")
-
     for filename in glob.glob(os.path.join(args.source_directory, '*.mdx')):
-
-        print(f"Processing {filename}...")
 
         frontmatter_data = frontmatter.load(filename)        
         metadata = frontmatter_data.metadata
@@ -90,11 +73,8 @@ def main(args):
         # Create destination path and move file
         if category is None:
             continue
-        destination_path = os.path.join(args.output, category, os.path.basename(filename))
-        print("destination path: ", destination_path)
         
-
-        # Move the file to the appropriate category directory
+        destination_path = os.path.join(args.output, category, os.path.basename(filename))
         os.rename(filename, destination_path)
         print(f"Moved {os.path.basename(filename)} to {category}/")
 
