@@ -86,7 +86,11 @@ def build_methods_section(methods: list[dict]) -> str:
     return f"## Methods:\n\n{formatted_methods}"
 
 def build_properties_section(properties: list[dict]) -> str:
-    """Build the Properties markdown section, or empty string if no visible properties."""
+    """Build the Properties mardown section for a class, or empty string if no properties.
+
+    Properties marked for internal use only (identified by 'lazydoc' in description) are
+    filtered out and not included in the output.
+    """
     if not properties:
         return ""
 
@@ -180,7 +184,11 @@ def generate_function_mdx_content(object: dict, release_tag: Optional[str] = Non
 
 
 def internal_use_only(object: dict) -> bool:
-    """Check if the object is marked for internal use based on the presence of 'lazydoc' in the description."""
+    """Check if the object is marked for internal use based on the presence of 'lazydoc' in the description.
+
+    Returns:
+        bool: True if 'lazydoc' is found in the description, indicating internal use only; False otherwise.
+    """
     description = object.get("description", "")
     return "lazydoc" in description
 
