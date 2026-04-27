@@ -50,7 +50,7 @@ def build_arguments_section(arguments: list[dict]) -> str:
     """Build the Arguments markdown section, or empty string if no arguments."""
     if not arguments:
         return ""
-    formatted_arguments = "".join(format_argument_row(arg) for arg in arguments)
+    formatted_arguments = "".join(format_argument_row(arg) for arg in arguments if not internal_use_only(arg))
     return f"## Args:\n\n{formatted_arguments}"
 
 def build_returns_section(returns: list[dict]) -> str:
@@ -82,7 +82,7 @@ def build_methods_section(methods: list[dict]) -> str:
     """Build the Methods markdown section for a class, or empty string if no methods."""
     if not methods:
         return ""
-    formatted_methods = "".join(format_methods_row(method) for method in methods)
+    formatted_methods = "".join(format_methods_row(method) for method in methods if not internal_use_only(method))
     return f"## Methods:\n\n{formatted_methods}"
 
 def build_properties_section(properties: list[dict]) -> str:
