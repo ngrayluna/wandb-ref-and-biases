@@ -218,7 +218,7 @@ def main(args):
             raise ValueError(f"Unsupported item kind: {object.get('kind')}")
 
         print(f"Created MDX content for {item_key}")
-        with open(f"{args.output_dir}/{object.get('defining_module', '').replace('.', '_')}.mdx", 'w', encoding='utf-8') as f:
+        with open(f"{args.output_dir}/{item_key}.{object.get('defining_module', '').replace('.', '_')}.mdx", 'w', encoding='utf-8') as f:
             f.write(template)
 
 
