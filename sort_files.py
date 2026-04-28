@@ -10,10 +10,6 @@ import os
 import glob
 import frontmatter
 
-# Read files in a directory and sort them into categories based on their metadata.
-
-# Data is stored as metadata in th mdx file.
-
 
 # Step 2. Read each mdx file, extract metadata, and move to appropriate directory
 
@@ -38,10 +34,14 @@ def sort_logic(kind: str, namespace: str) -> str:
         return "custom-charts"
     if "wandb.apis.public" in namespace:
         return "public-api"
+    if "wandb.plot" in namespace:
+        return "custom-charts"
 
 
 
 def main(args):
+
+    print("Sorting MDX files into categories...")
 
     root_directory = args.output
     # Step 1. Created directory for each category (e.g. data_types, experiments, automations, public_api)
@@ -52,13 +52,10 @@ def main(args):
 
         frontmatter_data = frontmatter.load(filename)        
         metadata = frontmatter_data.metadata
-
         kind = metadata.get("kind", "")
         namespace = metadata.get("namespace", "")
 
         category = sort_logic(kind=kind, namespace=namespace)
-        print("category", category)
-        
 
         # Create destination path and move file
         if category is None:

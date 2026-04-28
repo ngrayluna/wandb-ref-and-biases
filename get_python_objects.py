@@ -256,7 +256,7 @@ def write_public_exports_json(source_config: dict, output_path: str | Path,
 
 def main(args):
     for name, source_config in config.SOURCE.items():
-        output_file = Path(args.output_dir) / f"{name.lower()}_exports.json"
+        output_file = Path(args.output_dir) / f"{name.lower()}.json"
         write_public_exports_json(source_config, output_file)
 
 if __name__ == "__main__":

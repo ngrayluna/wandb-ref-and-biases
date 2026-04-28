@@ -200,6 +200,8 @@ def internal_use_only(object: dict) -> bool:
 
 def main(args):
 
+    print("Generating MDX files from JSON metadata...")
+
     for filename in glob.glob(os.path.join(args.source_info, '*.json')):
         with open(filename, 'r', encoding='utf-8') as file:
             json_file = json.load(file)
@@ -221,11 +223,12 @@ def main(args):
         with open(f"{args.output_dir}/{item_key}.{object.get('defining_module', '').replace('.', '_')}.mdx", 'w', encoding='utf-8') as f:
             f.write(template)
 
+    print("MDX generation complete.\n") 
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Generate MDX documentation files for Click commands.")
     parser.add_argument("--source-info", required=True, help="Path to JSON directory with command metadata.")
     parser.add_argument("--output-dir", default="output", help="Directory to write generated MDX files.")
     parser.add_argument("--release-tag", default=None, help="Git tag for GitHub source URLs (e.g., 'v0.18.3'). Defaults to 'main'.")
-    main(parser.parse_args())
-    print("MDX generation complete.")    
+    main(parser.parse_args())   
