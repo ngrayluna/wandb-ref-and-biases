@@ -9,8 +9,11 @@ from __future__ import annotations
 import argparse
 import json
 
+import os
+import glob
 import importlib
 import inspect
+
 import textwrap
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
@@ -774,39 +777,39 @@ def _get_object_kind(obj: Any) -> str:
 
 
 def main(args):
-    filename = args.input_file
 
-    # Read in JSON file. See sdk_exports.json for expected format.
-    with open(filename, "r", encoding="utf-8") as f:
-        exports_data = json.load(f)
+    for filename in glob.glob(os.path.join(args.input_dir, '*.json')):
+        # Read in JSON file. See sdk_exports.json for expected format.
+        with open(filename, "r", encoding="utf-8") as f:
+            exports_data = json.load(f)
 
 
-    # Iterate over the exports and document them, writing out a JSON file for each. 
-    for entry in exports_data:
-        
-        public_export = entry["public_name"]
-        namespace = entry["config_namespace"]
+        # Iterate over the exports and document them, writing out a JSON file for each. 
+        for entry in exports_data:
+            
+            public_export = entry["public_name"]
+            namespace = entry["config_namespace"]
 
-        print(f"\nDocumenting {namespace}.{public_export}...")
+            print(f"\nDocumenting {namespace}.{public_export}...")
 
-        docs_map, missing = document_exports(
-            object_name=public_export,
-            package_name=namespace,
-        )
+            docs_map, missing = document_exports(
+                object_name=public_export,
+                package_name=namespace,
+            )
 
-        output_path = Path(args.output_dir) / f"{namespace}.{public_export}.json"
-        output_path.write_text(
-            json.dumps(docs_map, indent=2, ensure_ascii=False) + "\n",
-            encoding="utf-8",
-        )
+            output_path = Path(args.output_dir) / f"{namespace}.{public_export}.json"
+            output_path.write_text(
+                json.dumps(docs_map, indent=2, ensure_ascii=False) + "\n",
+                encoding="utf-8",
+            )
 
-        if missing:
-            print("\nMissing exports:")
-            for export in missing:
-                print(f"  - {export.public_name}")
+            if missing:
+                print("\nMissing exports:")
+                for export in missing:
+                    print(f"  - {export.public_name}")
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Get object information.")
     parser.add_argument("--output-dir", required=False, default="./docs_json", help="Directory to write output JSON files.")
-    parser.add_argument("--input-file", help="Path to input JSON file with exports to document.")
+    parser.add_argument("--input-dir", help="Path to input JSON file with exports to document.")
     main(parser.parse_args())

@@ -23,5 +23,12 @@ SOURCE = {
             "__init__.py": BASE_DIR / "wandb" / "wandb" / "automations" / "__init__.py",
             "__init__.pyi": None
         }      
-    }
+    },
+    "CUSTOMCHARTS": {
+        "namespace": "wandb.plot",
+        "pckg_init_file": {
+            "__init__.py": BASE_DIR / "wandb" / "wandb" / "plot" / "__init__.py",
+            "__init__.pyi": None
+        },
+    },      
 }

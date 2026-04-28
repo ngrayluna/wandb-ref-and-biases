@@ -38,6 +38,8 @@ def sort_logic(kind: str, namespace: str) -> str:
         return "custom-charts"
     if "wandb.apis.public" in namespace:
         return "public-api"
+    if "wandb.plot" in namespace:
+        return "custom-charts"
 
 
 
