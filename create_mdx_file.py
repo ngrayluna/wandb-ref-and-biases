@@ -78,6 +78,11 @@ def build_signature_block(signature: str) -> str:
     if not signature:
         return ""
     formatted_signature = format_signature_block(signature)
+
+    # If empty after formatting (e.g., due to filtering for internal use only), return empty string to avoid rendering an empty code block
+    if not formatted_signature:
+        return ""
+
     return f"```python\n{formatted_signature}\n```"
 
 def build_methods_section(methods: list[dict]) -> str:
@@ -141,12 +146,24 @@ def format_signature_block(signature: str) -> str:
         entity: 'str | None' = None,
         project: 'str | None' = None,
     """
-    if not signature:
+    if "RetryingClient" in signature and "client" in signature:
         return ""
 
     params_part = signature.split(") ->", maxsplit=1)[0].removeprefix("(")
 
     return params_part.replace(", ", ",\n")
+
+def internal_use_only(object: dict) -> bool:
+    """Check if the dict object is marked for internal use based on the presence of 'lazydoc' in the description.
+
+    Args:
+        object (dict): The dictionary representing a function argument, return value, method, or property, which may contain a "description" key.
+
+    Returns:
+        bool: True if 'lazydoc' is found in the description, indicating internal use only; False otherwise.
+    """
+    description = object.get("description", "")
+    return "lazydoc" in description
 
 
 def generate_class_mdx_content(object: dict, release_tag: Optional[str] = None) -> str:
@@ -188,15 +205,6 @@ def generate_function_mdx_content(object: dict, release_tag: Optional[str] = Non
                 release_tag=release_tag)
     )
 
-
-def internal_use_only(object: dict) -> bool:
-    """Check if the object is marked for internal use based on the presence of 'lazydoc' in the description.
-
-    Returns:
-        bool: True if 'lazydoc' is found in the description, indicating internal use only; False otherwise.
-    """
-    description = object.get("description", "")
-    return "lazydoc" in description
 
 def main(args):
 
