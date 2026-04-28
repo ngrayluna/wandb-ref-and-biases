@@ -778,11 +778,12 @@ def _get_object_kind(obj: Any) -> str:
 
 def main(args):
 
+    print("Documenting public exports from package namespaces...")
+
     for filename in glob.glob(os.path.join(args.input_dir, '*.json')):
         # Read in JSON file. See sdk_exports.json for expected format.
         with open(filename, "r", encoding="utf-8") as f:
             exports_data = json.load(f)
-
 
         # Iterate over the exports and document them, writing out a JSON file for each. 
         for entry in exports_data:
@@ -790,7 +791,7 @@ def main(args):
             public_export = entry["public_name"]
             namespace = entry["config_namespace"]
 
-            print(f"\nDocumenting {namespace}.{public_export}...")
+            print(f"Documenting {namespace}.{public_export}...")
 
             docs_map, missing = document_exports(
                 object_name=public_export,
@@ -807,6 +808,8 @@ def main(args):
                 print("\nMissing exports:")
                 for export in missing:
                     print(f"  - {export.public_name}")
+
+    print("Documentation extraction complete.\n")
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Get object information.")
