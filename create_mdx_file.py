@@ -46,7 +46,7 @@ def format_github_button(
 
 def github_import_statement():
     """Mintlify-friendly import statement for GitHubLink component used in MDX templates."""
-    return "import { GitHubLink } from '/snippets/en/_includes/github-source-link.mdx';" + "\n\n"
+    return "import { GitHubLink } from '/snippets/_includes/github-source-link.mdx';" + "\n\n"
 
 def build_arguments_section(arguments: list[dict]) -> str:
     """Build the Arguments markdown section, or empty string if no arguments."""
