@@ -44,6 +44,8 @@ namespace: {namespace}
 
 {description}
 
+{examples_section}
+
 {arguments_section}
 
 {properties_section}
