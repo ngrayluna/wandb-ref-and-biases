@@ -71,6 +71,8 @@ def build_raises_section(raises: list[dict]) -> str:
 
 def build_examples_section(examples: str) -> str:
     """Build the Examples markdown section, or empty string if no examples."""
+    if not examples:
+        return ""
     return f"## Examples:\n\n{examples}"
 
 def build_signature_block(signature: str) -> str:
@@ -178,6 +180,7 @@ def generate_class_mdx_content(object: dict, release_tag: Optional[str] = None) 
         returns_section=build_returns_section(object.get("returns", "")),
         properties_section=build_properties_section(object.get("properties", [])),
         methods_section=build_methods_section(object.get("methods", [])),
+        examples_section=build_examples_section(object.get("examples", "")),
         import_statements=github_import_statement(),
         github_path=format_github_button(
                 source_file=object.get("source_file", ""),
