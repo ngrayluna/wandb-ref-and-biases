@@ -465,7 +465,8 @@ def _parse_docstring(docstring: str | None) -> ParsedDocstring:
             current_section = "returns"
             continue
 
-        if stripped == "Examples:":
+        # Check for both "Examples:" and "Example:"
+        if stripped == "Examples:" or stripped == "Example:":
             current_section = "examples"
             continue
 
