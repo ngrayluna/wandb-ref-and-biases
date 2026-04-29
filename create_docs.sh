@@ -91,6 +91,8 @@ python create_mdx_file.py --source-info ./docs_json/  --output-dir ./mdx_output
 
 python sort_files.py --source-directory mdx_output/ --output ./python
 
+python rename_files.py --source-directory ./python/
+
 echo "Copying generated docs to $DOCS_REPO/models/ref/python/..."
 
 cp -r ./python/* $DOCS_REPO/models/ref/python/
