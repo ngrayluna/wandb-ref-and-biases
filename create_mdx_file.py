@@ -2,6 +2,7 @@
 Generate .mdx files for Python SDK.
 """
 import os
+import re
 import argparse
 import glob
 import json
@@ -46,7 +47,7 @@ def format_github_button(
 
 def github_import_statement():
     """Mintlify-friendly import statement for GitHubLink component used in MDX templates."""
-    return "import { GitHubLink } from '/snippets/en/_includes/github-source-link.mdx';" + "\n\n"
+    return "import { GitHubLink } from '/snippets/_includes/github-source-link.mdx';" + "\n\n"
 
 def build_arguments_section(arguments: list[dict]) -> str:
     """Build the Arguments markdown section, or empty string if no arguments."""
@@ -151,9 +152,13 @@ def format_signature_block(signature: str) -> str:
     if "RetryingClient" in signature and "client" in signature:
         return ""
 
-    params_part = signature.split(") ->", maxsplit=1)[0].removeprefix("(")
+    # Remove surrounding return annotation.
+    params = re.sub(r"^\((.*)\)\s*->\s*.+$", r"\1", signature)
 
-    return params_part.replace(", ", ",\n")
+    # Split on commas only when the next thing looks like a parameter name.
+    parts = re.split(r",\s+(?=[A-Za-z_]\w*\s*:)", params)
+
+    return ",\n".join(parts)
 
 def internal_use_only(object: dict) -> bool:
     """Check if the dict object is marked for internal use based on the presence of 'lazydoc' in the description.
