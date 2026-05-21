@@ -8,7 +8,7 @@ import glob
 import json
 from typing import Optional
 
-from template import mdx_function_template, mdx_class_template
+from utils.template import CLASS_TEMPLATE, FUNCTION_TEMPLATE
 
 def _github_button(href_links: str) -> str:
     """Add a GitHub button with the given URL.
@@ -54,27 +54,27 @@ def build_arguments_section(arguments: list[dict]) -> str:
     if not arguments:
         return ""
     formatted_arguments = "".join(format_argument_row(arg) for arg in arguments if not internal_use_only(arg))
-    return f"## Args:\n\n{formatted_arguments}"
+    return f"## Args\n\n{formatted_arguments}"
 
 def build_returns_section(returns: list[dict]) -> str:
     """Build the Returns markdown section, or empty string if no return value."""
     if not returns:
         return ""
     formatted_returns = "".join(format_returns_row(ret) for ret in returns)
-    return f"## Returns:\n\n{formatted_returns}"
+    return f"## Returns\n\n{formatted_returns}"
 
 def build_raises_section(raises: list[dict]) -> str:
     """Build the Raises markdown section, or empty string if no exceptions raised."""
     if not raises:
         return ""
     formatted_raises = "".join(format_raises_row(raise_) for raise_ in raises)
-    return f"## Raises:\n\n{formatted_raises}"
+    return f"## Raises\n\n{formatted_raises}"
 
 def build_examples_section(examples: str) -> str:
     """Build the Examples markdown section, or empty string if no examples."""
     if not examples:
         return ""
-    return f"## Examples:\n\n{examples}"
+    return f"## Examples\n\n{examples}"
 
 def build_signature_block(signature: str) -> str:
     """Build a markdown code block for the function signature."""
@@ -107,7 +107,7 @@ def build_properties_section(properties: list[dict]) -> str:
     formatted_properties = "".join(format_property_row(prop) for prop in properties if not internal_use_only(prop))
     if not formatted_properties:
         return ""
-    return f"## Properties:\n\n{formatted_properties}"
+    return f"## Properties\n\n{formatted_properties}"
 
 def format_raises_row(raise_: dict) -> str:
     """Format a single exception row for the Raises section."""
@@ -119,7 +119,8 @@ def format_methods_row(method: dict) -> str:
     """Format a single method row for the Methods section."""
     name = method.get("name", "")
     description = method.get("description", "")
-    return f"### {name}\n\n{description}\n\n"
+    signature = build_signature_block(method.get("signature", ""))
+    return f"### {name}\n\n{signature}\n\n{description}\n\n"
 
 def format_property_row(property: dict) -> str:
     """Format a single property row for the Properties section."""
@@ -175,7 +176,7 @@ def internal_use_only(object: dict) -> bool:
 
 def generate_class_mdx_content(object: dict, release_tag: Optional[str] = None) -> str:
     """Generate MDX content for a class object using the class template."""
-    return mdx_class_template.format(
+    return CLASS_TEMPLATE.format(
         name=object.get("public_name", ""),
         kind=object.get("kind", ""),
         namespace=object.get("defining_module", ""),
@@ -196,7 +197,7 @@ def generate_class_mdx_content(object: dict, release_tag: Optional[str] = None) 
 
 def generate_function_mdx_content(object: dict, release_tag: Optional[str] = None) -> str:
     """Generate MDX content for a function object using the function template."""
-    return mdx_function_template.format(
+    return FUNCTION_TEMPLATE.format(
         name=object.get("name", ""),
         kind=object.get("kind", ""),
         namespace=object.get("defining_module", ""),

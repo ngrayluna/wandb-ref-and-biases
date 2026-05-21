@@ -1,8 +1,8 @@
 """
-Templates for generating MDX documentation files for Click commands."""
-
-## Template for individual functions
-mdx_function_template = """---
+Templates for generating MDX documentation files for Click commands.
+"""
+## Template for individual functions (not Class methods)## 
+FUNCTION_TEMPLATE = """---
 title: {name}
 kind: {kind}
 namespace: {namespace}
@@ -27,9 +27,9 @@ namespace: {namespace}
 
 """
 
-## Template for Python classes
+## Template for Class objects ##
 
-mdx_class_template = """---
+CLASS_TEMPLATE = """---
 title: {name}
 kind: {kind}
 namespace: {namespace}
