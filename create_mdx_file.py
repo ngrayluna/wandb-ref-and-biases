@@ -56,6 +56,13 @@ def build_arguments_section(arguments: list[dict]) -> str:
     formatted_arguments = "".join(format_argument_row(arg) for arg in arguments if not internal_use_only(arg))
     return f"## Args\n\n{formatted_arguments}"
 
+def build_method_arguments_section(arguments: list[dict]) -> str:
+    """Build the Arguments markdown section, or empty string if no arguments."""
+    if not arguments:
+        return ""
+    formatted_arguments = "".join(format_argument_row(arg) for arg in arguments if not internal_use_only(arg))
+    return f"##### Properties\n\n{formatted_arguments}"
+
 def build_returns_section(returns: list[dict]) -> str:
     """Build the Returns markdown section, or empty string if no return value."""
     if not returns:
@@ -120,7 +127,8 @@ def format_methods_row(method: dict) -> str:
     name = method.get("name", "")
     description = method.get("description", "")
     signature = build_signature_block(method.get("signature", ""))
-    return f"### <kbd>method</kbd> {name}\n\n{signature}\n\n{description}\n\n"
+    arguments = build_method_arguments_section(method.get("arguments", []))
+    return f"### <kbd>method</kbd> {name}\n\n{signature}\n\n{description}\n\n{arguments}\n\n"
 
 def format_property_row(property: dict) -> str:
     """Format a single property row for the Properties section."""
