@@ -93,7 +93,7 @@ def build_methods_section(methods: list[dict]) -> str:
     if not methods:
         return ""
     formatted_methods = "".join(format_methods_row(method) for method in methods if not internal_use_only(method))
-    return f"## Methods:\n\n{formatted_methods}"
+    return f"## Methods\n\n{formatted_methods}"
 
 def build_properties_section(properties: list[dict]) -> str:
     """Build the Properties mardown section for a class, or empty string if no properties.
@@ -120,13 +120,13 @@ def format_methods_row(method: dict) -> str:
     name = method.get("name", "")
     description = method.get("description", "")
     signature = build_signature_block(method.get("signature", ""))
-    return f"### {name}\n\n{signature}\n\n{description}\n\n"
+    return f"### <kbd>method</kbd> {name}\n\n{signature}\n\n{description}\n\n"
 
 def format_property_row(property: dict) -> str:
     """Format a single property row for the Properties section."""
     name = property.get("name", "")
     description = property.get("description", "")
-    return f"### {name}\n\n{description}\n\n"
+    return f"### <kbd>property</kbd> {name}\n\n{description}\n\n"
 
 def format_argument_row(argument: dict) -> str:
     """Format a single argument row for the Arguments section."""
