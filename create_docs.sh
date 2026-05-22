@@ -2,7 +2,7 @@
 set -euo pipefail
 
 REPO_URL="https://github.com/wandb/wandb.git"
-REPO_DIR="./.repos/wandb"
+REPO_DIR="../wandb"
 RELEASE_TAG=""
 JSON_OUTPUT_DIR="./objects_found"
 DOCS_REPO="../docs"
