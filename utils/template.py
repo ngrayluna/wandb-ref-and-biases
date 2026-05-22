@@ -13,8 +13,6 @@ namespace: {namespace}
 
 {signature}
 
-## Description
-
 {description}
 
 {arguments_section}
@@ -40,13 +38,11 @@ namespace: {namespace}
 
 {signature}
 
-## Description
-
 {description}
 
-{examples_section}
-
 {arguments_section}
+
+{examples_section}
 
 {properties_section}
 

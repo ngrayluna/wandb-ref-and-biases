@@ -49,6 +49,13 @@ def github_import_statement():
     """Mintlify-friendly import statement for GitHubLink component used in MDX templates."""
     return "import { GitHubLink } from '/snippets/_includes/github-source-link.mdx';" + "\n\n"
 
+
+def build_description_section(description: str) -> str:
+    """Build the Description markdown section, or empty string if no description."""
+    if not description:
+        return ""
+    return f"## Description\n\n{description}\n\n"
+
 def build_arguments_section(arguments: list[dict]) -> str:
     """Build the Arguments markdown section, or empty string if no arguments."""
     if not arguments:
@@ -188,7 +195,7 @@ def generate_class_mdx_content(object: dict, release_tag: Optional[str] = None) 
         name=object.get("public_name", ""),
         kind=object.get("kind", ""),
         namespace=object.get("defining_module", ""),
-        description=object.get("description", ""),
+        description=build_description_section(object.get("description", "")),
         signature=build_signature_block(object.get("signature", ""),),
         arguments_section=build_arguments_section(object.get("arguments", []),),
         returns_section=build_returns_section(object.get("returns", "")),
@@ -209,7 +216,7 @@ def generate_function_mdx_content(object: dict, release_tag: Optional[str] = Non
         name=object.get("name", ""),
         kind=object.get("kind", ""),
         namespace=object.get("defining_module", ""),
-        description=object.get("description", ""),
+        description=build_description_section(object.get("description", "")),
         signature=build_signature_block(object.get("signature", "")),
         arguments_section=build_arguments_section(object.get("arguments", [])),
         returns_section=build_returns_section(object.get("returns", "")),
