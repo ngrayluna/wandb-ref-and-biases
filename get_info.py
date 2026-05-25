@@ -53,6 +53,11 @@ class ReturnDoc:
     type_name: str = ""
     description: str = ""
 
+@dataclass(frozen=True, slots=True)
+class RaisesDoc:
+    """Documentation for a raised exception."""
+    name: str
+    description: str
 
 @dataclass(frozen=True, slots=True)
 class PropertyDoc:
@@ -77,6 +82,7 @@ class MethodDoc:
     arguments: list[ArgumentDoc] = field(default_factory=list)
     returns: list[ReturnDoc] = field(default_factory=list)
     examples: str = ""
+    raises: list[RaisesDoc] = field(default_factory=list)
 
 
 @dataclass(frozen=True, slots=True)
@@ -95,6 +101,7 @@ class FunctionDoc:
     signature: str | None = None
     arguments: list[ArgumentDoc] = field(default_factory=list)
     returns: list[ReturnDoc] = field(default_factory=list)
+    raises: list[RaisesDoc] = field(default_factory=list)
     internal_use: bool = False
 
 
@@ -116,6 +123,7 @@ class ClassDoc:
     arguments: list[ArgumentDoc] = field(default_factory=list)
     properties: list[PropertyDoc] = field(default_factory=list)
     methods: list[MethodDoc] = field(default_factory=list)
+    raises: list[RaisesDoc] = field(default_factory=list)
     
 
 
@@ -247,7 +255,6 @@ def document_exports(
         for export, obj in resolved
     ]
 
-
     docs_map: dict[str, dict[str, Any]] = {}
     for item in documentable_objects:
         docs_map[item.public_name] = asdict(build_public_doc_entry(item))
@@ -292,6 +299,7 @@ def _build_function_doc(item: DocumentableObject) -> FunctionDoc:
         signature=item.signature,
         arguments=arguments,
         returns=returns,
+        raises=parsed.raises,
         internal_use=_check_lazydoc(parsed.description)
     )
 
@@ -320,6 +328,7 @@ def _build_class_doc(item: DocumentableObject) -> ClassDoc:
         ),
         properties=properties,
         methods=methods,
+        raises=parsed.raises
     )
 
 
@@ -401,6 +410,7 @@ def _collect_class_methods(cls: type[Any]) -> list[MethodDoc]:
                 arguments=arguments,
                 returns=returns,
                 examples=parsed.examples,
+                raises=parsed.raises
             )
         )
 
@@ -429,7 +439,7 @@ class ParsedDocstring:
     examples: str = ""
     arguments: list[ArgumentDoc] = field(default_factory=list)
     returns: list[ReturnDoc] = field(default_factory=list)
-
+    raises: list[RaisesDoc] = field(default_factory=list)
 
 def _parse_docstring(docstring: str | None) -> ParsedDocstring:
     """Parse a docstring into a small set of docs-oriented sections.
@@ -440,17 +450,24 @@ def _parse_docstring(docstring: str | None) -> ParsedDocstring:
     - Parameters:
     - Returns:
     - Examples:
+    - Raises:
+
+    Returns:
+        ParsedDocstring
     """
     if not docstring:
         return ParsedDocstring()
 
+    # Clean the docstring
     cleaned = inspect.cleandoc(docstring)
     lines = cleaned.splitlines()
 
+    # Parse each section
     description_lines: list[str] = []
     args_lines: list[str] = []
     returns_lines: list[str] = []
     examples_lines: list[str] = []
+    raises_lines: list[str] = []
 
     current_section = "description"
 
@@ -470,6 +487,11 @@ def _parse_docstring(docstring: str | None) -> ParsedDocstring:
             current_section = "examples"
             continue
 
+        if stripped == "Raises:":
+            current_section = "raises"
+            continue
+
+        # 
         if current_section == "description":
             description_lines.append(line)
         elif current_section == "arguments":
@@ -478,12 +500,15 @@ def _parse_docstring(docstring: str | None) -> ParsedDocstring:
             returns_lines.append(line)
         elif current_section == "examples":
             examples_lines.append(line)
+        elif current_section == "raises":
+            raises_lines.append(line)
 
     return ParsedDocstring(
         description=_normalize_block(description_lines),
-        examples=_normalize_block(examples_lines),
         arguments=_parse_argument_block(args_lines),
         returns=_parse_return_block(returns_lines),
+        examples=_normalize_block(examples_lines),
+        raises=_parse_raises_block(raises_lines),
     )
 
 
@@ -535,9 +560,53 @@ def _parse_argument_block(lines: list[str]) -> list[ArgumentDoc]:
 
     return arguments
 
+def _parse_raises_block(lines: list[str]) -> list[RaisesDoc]:
+    """Parses a Raises-style block.
+
+    Returns:
+        list[RaisesDoc]
+    """
+    raises: list[RaisesDoc] = []
+    name: str | None = None
+    description: list[str] = []
+
+    for raw_line in lines:
+        line = raw_line.rstrip()
+        stripped = line.strip()
+
+        if not stripped:
+            continue
+
+        if _looks_like_doc_field(stripped):
+            if name is not None:
+                raises.append(
+                    RaisesDoc(
+                        name=name,
+                        description=_join_description_lines(description),
+                    )
+                )
+
+            name, description = _split_doc_field(stripped)
+            description = [description] if description else []
+            continue
+
+        if name is not None:
+            description.append(stripped)
+
+    if name is not None:
+        raises.append(
+            RaisesDoc(
+                name=name,
+                description=_join_description_lines(description),
+            )
+        )
+
+    return raises
+
+
 
 def _parse_return_block(lines: list[str]) -> list[ReturnDoc]:
-    """Parse a Returns-style block.
+    """Parses a Returns-style block.
 
     Expected styles:
         Description
@@ -597,7 +666,10 @@ def _looks_like_doc_field(line: str) -> bool:
 
 
 def _split_doc_field(line: str) -> tuple[str, str]:
-    """Split a simple ``name: description`` doc line."""
+    """Split a simple ``name: description`` doc line.
+    
+    TODO: Use RegEx
+    """
     left, right = line.split(":", 1)
     name = left.strip()
     description = right.strip()
