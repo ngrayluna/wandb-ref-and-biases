@@ -84,11 +84,24 @@ def build_raises_section(raises: list[dict]) -> str:
     formatted_raises = "".join(format_raises_row(raise_) for raise_ in raises)
     return f"## Raises\n\n{formatted_raises}"
 
+def build_method_raises_section(raises: list[dict]) -> str:
+    """Build the Raises markdown section, or empty string if no exceptions raised."""
+    if not raises:
+        return ""
+    formatted_raises = "".join(format_raises_row(raise_) for raise_ in raises)
+    return f"##### Raises\n\n{formatted_raises}"
+
 def build_examples_section(examples: str) -> str:
     """Build the Examples markdown section, or empty string if no examples."""
     if not examples:
         return ""
     return f"## Examples\n\n{examples}"
+
+def build_method_examples_section(examples: str) -> str:
+    """Build the Examples markdown section, or empty string if no examples."""
+    if not examples:
+        return ""
+    return f"##### Examples\n\n{examples}\n\n"
 
 def build_signature_block(signature: str) -> str:
     """Build a markdown code block for the function signature."""
@@ -125,9 +138,9 @@ def build_properties_section(properties: list[dict]) -> str:
 
 def format_raises_row(raise_: dict) -> str:
     """Format a single exception row for the Raises section."""
-    type_name = raise_.get("type_name", "")
+    name = raise_.get("name", "")
     description = raise_.get("description", "")
-    return f"- **{type_name}**: {description}\n"
+    return f"- **{name}**: {description}\n"
 
 def format_methods_row(method: dict) -> str:
     """Format a single method row for the Methods section."""
@@ -135,7 +148,9 @@ def format_methods_row(method: dict) -> str:
     description = method.get("description", "")
     signature = build_signature_block(method.get("signature", ""))
     arguments = build_method_arguments_section(method.get("arguments", []))
-    return f"### <kbd>method</kbd> {name}\n\n{signature}\n\n{description}\n\n{arguments}\n\n"
+    raises = build_method_raises_section(method.get("raises", []))
+    examples = build_method_examples_section(method.get("examples", ""))
+    return f"### <kbd>method</kbd> {name}\n\n{signature}\n\n{description}\n\n{arguments}\n\n{raises}\n\n{examples}"
 
 def format_property_row(property: dict) -> str:
     """Format a single property row for the Properties section."""
@@ -153,7 +168,10 @@ def format_returns_row(return_value: dict) -> str:
     """Format a single return value row for the Returns section."""
     type_name = return_value.get("type_name", "")
     description = return_value.get("description", "")
-    return f"- **{type_name}**: {description}\n"
+    if type_name is "":
+        return f"{description}"
+    else:
+        return f"- **{type_name}**: {description}\n"
 
 def format_signature_block(signature: str) -> str:
     """Return the parameter portion of a signature as a multi-line block.
