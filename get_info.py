@@ -138,6 +138,7 @@ class AttributeDoc:
     source_file: str = ""
     line_number: int | None = None
     import_statement: str = ""
+    internal_use: bool = False
 
 
 
@@ -184,7 +185,7 @@ class DocumentableObject:
 
 #######
 
-def resolve_exports(
+def _resolve_exports(
     package_name: str,
     exports: list[ExportedName],
 ) -> tuple[list[tuple[ExportedName, Any]], list[ExportedName]]:
@@ -204,7 +205,7 @@ def resolve_exports(
         - ``missing``: ``ExportedName`` records not present on the package.
 
     Example:
-        >>> resolve_exports("wandb", [ExportedName(public_name="Api")])
+        >>> _resolve_exports("wandb", [ExportedName(public_name="Api")])
         ([(ExportedName(public_name='Api', ...), <class '...Api'>)], [])    
     """
     module = importlib.import_module(package_name)
@@ -236,7 +237,7 @@ def document_exports(
 
     Args:
         object_name: Public name as it appears on the package namespace                                                                                                                  
-            (e.g. ``"Api"``, not ``"wandb.apis.public.api.Api"``).
+            (i.e. ``"Api"``, not ``"wandb.apis.public.api.Api"``).
         package_name: Dotted import path of the package exporting it.
     
     Returns:
@@ -249,13 +250,16 @@ def document_exports(
         >>> docs_map["Api"]["kind"]                                                                                                                                                          
         'class'    
     """
-    resolved, missing = resolve_exports(package_name, [ExportedName(public_name=object_name)])
+    # Resolve the exports against the package namespace.
+    resolved, missing = _resolve_exports(package_name, [ExportedName(public_name=object_name)])
     documentable_objects = [
         DocumentableObject.from_export(export, obj)
         for export, obj in resolved
     ]
 
     docs_map: dict[str, dict[str, Any]] = {}
+
+    # Build documentation entries for each resolved object.
     for item in documentable_objects:
         docs_map[item.public_name] = asdict(build_public_doc_entry(item))
 
@@ -861,9 +865,11 @@ def main(args):
         # Iterate over the exports and document them, writing out a JSON file for each. 
         for entry in exports_data:
             
+            # Extract the public export name and namespace.
             public_export = entry["public_name"]
             namespace = entry["config_namespace"]
 
+            # TODO: Replace with logging
             print(f"Documenting {namespace}.{public_export}...")
 
             docs_map, missing = document_exports(
@@ -871,6 +877,7 @@ def main(args):
                 package_name=namespace,
             )
 
+            # Create output filepath and save as JSON
             output_path = Path(args.output_dir) / f"{namespace}.{public_export}.json"
             output_path.write_text(
                 json.dumps(docs_map, indent=2, ensure_ascii=False) + "\n",
