@@ -40,20 +40,11 @@ import argparse
 import json
 
 import ast
-from dataclasses import asdict, dataclass
+from dataclasses import asdict
 from pathlib import Path
 
 import config
-
-@dataclass(frozen=True, slots=True)
-class ExportedName:
-    """A public name exported by a module."""
-
-    public_name: str
-    source_module: str | None = None
-    source_name: str | None = None
-    declared_in_all: bool = False
-    config_namespace: str = ""
+from models import ExportedName
 
 
 def parse_public_exports(path: Path, namespace: str) -> list[ExportedName]:
