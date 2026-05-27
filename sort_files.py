@@ -11,8 +11,6 @@ import glob
 import frontmatter
 
 
-# Step 2. Read each mdx file, extract metadata, and move to appropriate directory
-
 def create_directories(root_directory: str) -> None:
     """Create category directories under the root directory."""
     categories = ["data-types", "experiments", "functions","automations", "custom-charts", "public-api"]
