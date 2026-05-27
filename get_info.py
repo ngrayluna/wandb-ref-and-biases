@@ -4,6 +4,9 @@ docstrings, and build structured docs data for use in MDX generation.
 
 Usage:
     python get_info.py --input-dir=./objects_found --output-dir=./docs_json
+
+Output:
+    A JSON file containing the structured docs data for each public object.
 """
 from __future__ import annotations
 
@@ -13,15 +16,15 @@ from dataclasses import asdict
 from pathlib import Path
 from typing import Any
 
-from docstrings_parser import check_lazydoc, parse_docstring
-from models import (
+from sdk_docs_generator.docstrings_parser import check_lazydoc, parse_docstring
+from sdk_docs_generator.models import (
     AttributeDoc,
     ClassDoc,
     DocumentableObject,
     ExportedName,
     FunctionDoc,
 )
-from object_inspection import (
+from sdk_docs_generator.object_inspection import (
     build_argument_docs,
     build_default_return_docs,
     collect_class_methods,
@@ -137,6 +140,7 @@ def main(args: argparse.Namespace) -> None:
     for input_path in Path(args.input_dir).glob("*.json"):
         exports_data = json.loads(input_path.read_text(encoding="utf-8"))
 
+        # Extract the namespace and name of the export
         for entry in exports_data:
             public_export = entry["public_name"]
             namespace = entry["config_namespace"]

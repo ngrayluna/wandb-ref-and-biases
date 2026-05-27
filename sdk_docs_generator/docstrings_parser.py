@@ -4,7 +4,12 @@ from __future__ import annotations
 import inspect
 import textwrap
 
-from models import ArgumentDoc, ParsedDocstring, RaisesDoc, ReturnDoc
+from sdk_docs_generator.models import (
+    ArgumentDoc,
+    ParsedDocstring,
+    RaisesDoc,
+    ReturnDoc,
+)
 
 
 def parse_docstring(docstring: str | None) -> ParsedDocstring:

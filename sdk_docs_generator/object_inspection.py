@@ -5,8 +5,8 @@ import importlib
 import inspect
 from typing import Any
 
-from docstrings_parser import check_lazydoc, parse_docstring
-from models import (
+from sdk_docs_generator.docstrings_parser import check_lazydoc, parse_docstring
+from sdk_docs_generator.models import (
     ArgumentDoc,
     DocumentableObject,
     ExportedName,
