@@ -894,5 +894,5 @@ def main(args):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Get object information.")
     parser.add_argument("--output-dir", required=False, default="./docs_json", help="Directory to write output JSON files.")
-    parser.add_argument("--input-dir", help="Path to input JSON file with exports to document.")
+    parser.add_argument("--input-dir", required=True, help="Path to input JSON file with exports to document.")
     main(parser.parse_args())
