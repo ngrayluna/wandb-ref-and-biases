@@ -1,0 +1,8 @@
+[project]
+name = "wandb_python_reference_docs"
+version = "0.0.1"
+dependencies = [
+    "python-frontmatter >=1.1.0"
+]
+requires-python = ">= 3.8"
+package = false
