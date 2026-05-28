@@ -68,7 +68,7 @@ def build_method_arguments_section(arguments: list[dict]) -> str:
     if not arguments:
         return ""
     formatted_arguments = "".join(format_argument_row(arg) for arg in arguments if not internal_use_only(arg))
-    return f"##### Properties\n\n{formatted_arguments}"
+    return f"##### Arguments\n\n{formatted_arguments}"
 
 def build_returns_section(returns: list[dict]) -> str:
     """Build the Returns markdown section, or empty string if no return value."""
@@ -152,10 +152,10 @@ def format_methods_row(method: dict) -> str:
     examples = build_method_examples_section(method.get("examples", ""))
     return f"### <kbd>method</kbd> {name}\n\n{signature}\n\n{description}\n\n{arguments}\n\n{raises}\n\n{examples}"
 
-def format_property_row(property: dict) -> str:
+def format_property_row(property_doc: dict) -> str:
     """Format a single property row for the Properties section."""
-    name = property.get("name", "")
-    description = property.get("description", "")
+    name = property_doc.get("name", "")
+    description = property_doc.get("description", "")
     return f"### <kbd>property</kbd> {name}\n\n{description}\n\n"
 
 def format_argument_row(argument: dict) -> str:
@@ -194,7 +194,7 @@ def format_signature_block(signature: str) -> str:
 
     return ",\n".join(parts)
 
-def internal_use_only(object: dict) -> bool:
+def internal_use_only(doc_entry: dict) -> bool:
     """Check if the dict object is marked for internal use based on the presence of 'lazydoc' in the description.
 
     Args:
@@ -203,47 +203,47 @@ def internal_use_only(object: dict) -> bool:
     Returns:
         bool: True if 'lazydoc' is found in the description, indicating internal use only; False otherwise.
     """
-    description = object.get("description", "")
+    description = doc_entry.get("description", "")
     return "lazydoc" in description
 
 
-def generate_class_mdx_content(object: dict, release_tag: Optional[str] = None) -> str:
+def generate_class_mdx_content(doc_entry: dict, release_tag: Optional[str] = None) -> str:
     """Generate MDX content for a class object using the class template."""
     return CLASS_TEMPLATE.format(
-        name=object.get("public_name", ""),
-        kind=object.get("kind", ""),
-        namespace=object.get("defining_module", ""),
-        description=build_description_section(object.get("description", "")),
-        signature=build_signature_block(object.get("signature", ""),),
-        arguments_section=build_arguments_section(object.get("arguments", []),),
-        returns_section=build_returns_section(object.get("returns", "")),
-        properties_section=build_properties_section(object.get("properties", [])),
-        methods_section=build_methods_section(object.get("methods", [])),
-        examples_section=build_examples_section(object.get("examples", "")),
+        name=doc_entry.get("public_name", ""),
+        kind=doc_entry.get("kind", ""),
+        namespace=doc_entry.get("defining_module", ""),
+        description=build_description_section(doc_entry.get("description", "")),
+        signature=build_signature_block(doc_entry.get("signature", ""),),
+        arguments_section=build_arguments_section(doc_entry.get("arguments", []),),
+        returns_section=build_returns_section(doc_entry.get("returns", "")),
+        properties_section=build_properties_section(doc_entry.get("properties", [])),
+        methods_section=build_methods_section(doc_entry.get("methods", [])),
+        examples_section=build_examples_section(doc_entry.get("examples", "")),
         import_statements=github_import_statement(),
         github_path=format_github_button(
-                source_file=object.get("source_file", ""),
-                line_number=object.get("line_number", 0),
+                source_file=doc_entry.get("source_file", ""),
+                line_number=doc_entry.get("line_number", 0),
                 release_tag=release_tag)
     )
 
 
-def generate_function_mdx_content(object: dict, release_tag: Optional[str] = None) -> str:
+def generate_function_mdx_content(doc_entry: dict, release_tag: Optional[str] = None) -> str:
     """Generate MDX content for a function object using the function template."""
     return FUNCTION_TEMPLATE.format(
-        name=object.get("name", ""),
-        kind=object.get("kind", ""),
-        namespace=object.get("defining_module", ""),
-        description=build_description_section(object.get("description", "")),
-        signature=build_signature_block(object.get("signature", "")),
-        arguments_section=build_arguments_section(object.get("arguments", [])),
-        returns_section=build_returns_section(object.get("returns", "")),
-        raises_section=build_raises_section(object.get("raises", [])),
-        examples_section=build_examples_section(object.get("examples", "")),
+        name=doc_entry.get("name", ""),
+        kind=doc_entry.get("kind", ""),
+        namespace=doc_entry.get("defining_module", ""),
+        description=build_description_section(doc_entry.get("description", "")),
+        signature=build_signature_block(doc_entry.get("signature", "")),
+        arguments_section=build_arguments_section(doc_entry.get("arguments", [])),
+        returns_section=build_returns_section(doc_entry.get("returns", "")),
+        raises_section=build_raises_section(doc_entry.get("raises", [])),
+        examples_section=build_examples_section(doc_entry.get("examples", "")),
         import_statements=github_import_statement(),
         github_path=format_github_button(
-                source_file=object.get("source_file", ""),
-                line_number=object.get("line_number", 0),
+                source_file=doc_entry.get("source_file", ""),
+                line_number=doc_entry.get("line_number", 0),
                 release_tag=release_tag)
     )
 
@@ -270,7 +270,8 @@ def main(args):
             raise ValueError(f"Unsupported item kind: {object.get('kind')}")
 
         print(f"Created MDX content for {item_key}")
-        with open(f"{args.output_dir}/{item_key}.{object.get('defining_module', '').replace('.', '_')}.mdx", 'w', encoding='utf-8') as f:
+        output_dir = args.output_dir
+        with open(f"{output_dir}/{item_key}.{object.get('defining_module', '').replace('.', '_')}.mdx", 'w', encoding='utf-8') as f:
             f.write(template)
 
     print("MDX generation complete.\n") 
