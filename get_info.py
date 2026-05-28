@@ -16,15 +16,15 @@ from dataclasses import asdict
 from pathlib import Path
 from typing import Any
 
-from sdk_docs_generator.docstrings_parser import check_lazydoc, parse_docstring
-from sdk_docs_generator.models import (
+from generator.docstrings_parser import check_lazydoc, parse_docstring
+from generator.models import (
     AttributeDoc,
     ClassDoc,
     DocumentableObject,
     ExportedName,
     FunctionDoc,
 )
-from sdk_docs_generator.object_inspection import (
+from generator.inspection import (
     build_argument_docs,
     build_default_return_docs,
     collect_class_methods,

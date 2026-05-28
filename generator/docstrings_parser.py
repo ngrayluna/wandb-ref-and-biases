@@ -4,7 +4,7 @@ from __future__ import annotations
 import inspect
 import textwrap
 
-from sdk_docs_generator.models import (
+from generator.models import (
     ArgumentDoc,
     ParsedDocstring,
     RaisesDoc,

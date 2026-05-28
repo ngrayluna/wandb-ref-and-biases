@@ -168,7 +168,7 @@ def format_returns_row(return_value: dict) -> str:
     """Format a single return value row for the Returns section."""
     type_name = return_value.get("type_name", "")
     description = return_value.get("description", "")
-    if type_name is "":
+    if type_name == "":
         return f"{description}"
     else:
         return f"- **{type_name}**: {description}\n"
