@@ -4,19 +4,22 @@ set -euo pipefail
 REPO_URL="https://github.com/wandb/wandb.git"
 REPO_DIR="../wandb"
 RELEASE_TAG=""
-JSON_OUTPUT_DIR="./objects_found"
-DOCS_REPO="../docs"
+JSON_NAMESPACES_DIR="./objects_found"
+JSON_DOC_ENTRIES_DIR="./docs_json"
+TMP_MDX_OUTPUT_DIR="./mdx_output"
+MDX_OUTPUT_DIR="./python"
+
 
 usage() {
   cat <<EOF
 Usage:
-  $0 [--repo-dir PATH] [--tag TAG] [--json-output-dir PATH] [--docs-repo PATH]
+  $0 [--repo-dir PATH] [--tag TAG] [--json-namespaces-dir PATH] [--docs-repo PATH]
 
 Examples:
   $0 --repo-dir ../wandb
   $0 --tag v0.17.0
   $0 --repo-dir /tmp/wandb --tag v0.17.0
-  $0 --repo-dir ../wandb --json-output-dir ./docs_json --docs-repo ../docs
+  $0 --repo-dir ../wandb --json-namespaces-dir ./docs_json --docs-repo ../docs
 EOF
 }
 
@@ -30,8 +33,8 @@ while [[ $# -gt 0 ]]; do
       RELEASE_TAG="${2:?Missing value for --tag}"
       shift 2
       ;;
-    --json-output-dir)
-      JSON_OUTPUT_DIR="${2:?Missing value for --json-output-dir}"
+    --json-namespaces-dir)
+      JSON_NAMESPACES_DIR="${2:?Missing value for --json-namespaces-dir}"
       shift 2
       ;;
     --docs-repo)
@@ -83,15 +86,15 @@ fi
 export PYTHONPATH="$REPO_ROOT${PYTHONPATH:+:$PYTHONPATH}"
 
 # Run the Python scripts to generate the docs
-python get_python_objects.py --output-dir=./objects_found
+python get_python_objects.py --output-dir="$JSON_NAMESPACES_DIR"
 
-python get_info.py --input-dir=./objects_found --output-dir=./docs_json
+python get_info.py --input-dir="$JSON_NAMESPACES_DIR" --output-dir="$JSON_DOC_ENTRIES_DIR"
 
-python create_mdx_file.py --source-info ./docs_json/  --output-dir ./mdx_output
+python create_mdx_file.py --source-info "$JSON_DOC_ENTRIES_DIR/"  --output-dir="$TMP_MDX_OUTPUT_DIR"
 
-python sort_files.py --source-directory mdx_output/ --output ./python
+python sort_files.py --source-directory "$TMP_MDX_OUTPUT_DIR" --output "$MDX_OUTPUT_DIR"
 
-python rename_files.py --source-directory ./python/
+python rename_files.py --source-directory "$MDX_OUTPUT_DIR/"
 
 echo "Copying generated docs to $DOCS_REPO/models/ref/python/..."
 
