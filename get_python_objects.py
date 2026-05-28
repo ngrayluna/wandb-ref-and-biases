@@ -44,7 +44,7 @@ from dataclasses import asdict
 from pathlib import Path
 
 import config
-from sdk_docs_generator.models import ExportedName
+from generator.models import ExportedName
 
 
 def parse_public_exports(path: Path, namespace: str) -> list[ExportedName]:
