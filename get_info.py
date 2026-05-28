@@ -32,23 +32,19 @@ from generator.models import (
 )
 
 
-def document_exports(
-    object_name: str,
-    package_name: str,
+def document_export(
+    export: ExportedName,
 ) -> tuple[dict[str, dict[str, Any]], list[ExportedName]]:
-    """Build a JSON-serializable mapping of public docs data."""
+    """Build a JSON-serializable mapping of docs data for one parsed export."""
     resolved, missing = resolve_exports(
-        package_name,
-        [ExportedName(public_name=object_name)],
+        export.config_namespace,
+        [export],
     )
-    documentable_objects = [
-        documentable_object_from_export(export, obj)
-        for export, obj in resolved
-    ]
 
     docs_map: dict[str, dict[str, Any]] = {}
 
-    for item in documentable_objects:
+    for resolved_export, obj in resolved:
+        item = documentable_object_from_export(resolved_export, obj)
         docs_map[item.public_name] = asdict(build_public_doc_entry(item))
 
     return docs_map, missing
@@ -80,17 +76,16 @@ def main(args: argparse.Namespace) -> None:
 
         # Extract the namespace and name of the export
         for entry in exports_data:
-            public_export = entry["public_name"]
-            namespace = entry["config_namespace"]
 
-            print(f"Documenting {namespace}.{public_export}...")
+            # Convert the dict entry to an ExportedName dataclass for easier handling
+            export = ExportedName(**entry)
 
-            docs_map, missing = document_exports(
-                object_name=public_export,
-                package_name=namespace,
-            )
+            print(f"Documenting {export.config_namespace}.{export.public_name}...")
 
-            output_path = output_dir / f"{namespace}.{public_export}.json"
+            docs_map, missing = document_export(export)
+
+            # Define output path as {namespace}.{public_name}.json to ensure uniqueness
+            output_path = output_dir / f"{export.config_namespace}.{export.public_name}.json"
             output_path.write_text(
                 json.dumps(docs_map, indent=2, ensure_ascii=False) + "\n",
                 encoding="utf-8",
