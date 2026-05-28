@@ -59,7 +59,7 @@ def build_description_section(description: str) -> str:
 def build_arguments_section(arguments: list[dict]) -> str:
     """Build the Arguments markdown section, or empty string if no arguments."""
     if not arguments:
-        return ""
+        return ""       
     formatted_arguments = "".join(format_argument_row(arg) for arg in arguments if not internal_use_only(arg))
     return f"## Args\n\n{formatted_arguments}"
 
@@ -261,17 +261,17 @@ def main(args):
             print(f"No items found in {filename}, skipping.")
             continue
 
-        object = json_file[item_key]
-        if object.get("kind") == "class":
-            template = generate_class_mdx_content(object, release_tag=args.release_tag)
-        elif object.get("kind") == "function":
-            template = generate_function_mdx_content(object, release_tag=args.release_tag)
+        doc_entry = json_file[item_key]
+        if doc_entry.get("kind") == "class":
+            template = generate_class_mdx_content(doc_entry, release_tag=args.release_tag)
+        elif doc_entry.get("kind") == "function":
+            template = generate_function_mdx_content(doc_entry, release_tag=args.release_tag)
         else:
-            raise ValueError(f"Unsupported item kind: {object.get('kind')}")
+            raise ValueError(f"Unsupported item kind: {doc_entry.get('kind')}")
 
         print(f"Created MDX content for {item_key}")
         output_dir = args.output_dir
-        with open(f"{output_dir}/{item_key}.{object.get('defining_module', '').replace('.', '_')}.mdx", 'w', encoding='utf-8') as f:
+        with open(f"{output_dir}/{item_key}.{doc_entry.get('defining_module', '').replace('.', '_')}.mdx", 'w', encoding='utf-8') as f:
             f.write(template)
 
     print("MDX generation complete.\n") 
