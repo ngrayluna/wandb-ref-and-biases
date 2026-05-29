@@ -109,7 +109,8 @@ def build_signature_block(signature: str) -> str:
         return ""
     formatted_signature = format_signature_block(signature)
 
-    # If empty after formatting (e.g., due to filtering for internal use only), return empty string to avoid rendering an empty code block
+    # If empty after formatting (e.g., due to filtering for internal use only),
+    # return empty string to avoid rendering an empty code block
     if not formatted_signature:
         return ""
 
@@ -174,7 +175,8 @@ def format_returns_row(return_value: dict) -> str:
         return f"- **{type_name}**: {description}\n"
 
 def format_signature_block(signature: str) -> str:
-    """Return the parameter portion of a signature as a multi-line block.
+    """Return the signature string formatted with line breaks for readability,
+    or empty string if signature is empty or filtered out for internal use only.
 
     Example input:
         "(entity: 'str | None' = None, project: 'str | None' = None) -> 'Run'"
@@ -183,6 +185,9 @@ def format_signature_block(signature: str) -> str:
         entity: 'str | None' = None,
         project: 'str | None' = None,
     """
+
+    # Filter out signatures that contain 'client' parameters for
+    # 'RetryingClient' objects, as these are internal and not relevant for end users.
     if "RetryingClient" in signature and "client" in signature:
         return ""
 
@@ -194,14 +199,17 @@ def format_signature_block(signature: str) -> str:
 
     return ",\n".join(parts)
 
+
 def internal_use_only(doc_entry: dict) -> bool:
-    """Check if the dict object is marked for internal use based on the presence of 'lazydoc' in the description.
+    """Check if the doc entry is marked for internal use based on the presence of 'lazydoc' in the description.
 
     Args:
-        object (dict): The dictionary representing a function argument, return value, method, or property, which may contain a "description" key.
+        object (dict): The dictionary representing a function argument, return
+            value, method, or property, which may contain a "description" key.
 
     Returns:
-        bool: True if 'lazydoc' is found in the description, indicating internal use only; False otherwise.
+        bool: True if 'lazydoc' is found in the description, indicating
+            internal use only; False otherwise.
     """
     description = doc_entry.get("description", "")
     return "lazydoc" in description
