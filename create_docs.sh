@@ -3,6 +3,7 @@ set -euo pipefail
 
 REPO_URL="https://github.com/wandb/wandb.git"
 REPO_DIR="../wandb"
+DOCS_REPO_DIR="../docs"
 RELEASE_TAG=""
 JSON_NAMESPACES_DIR="./objects_found"
 JSON_DOC_ENTRIES_DIR="./docs_json"
@@ -38,7 +39,7 @@ while [[ $# -gt 0 ]]; do
       shift 2
       ;;
     --docs-repo)
-      DOCS_REPO="${2:?Missing value for --docs-repo}"
+      DOCS_REPO_DIR="${2:?Missing value for --docs-repo}"
       shift 2
       ;;
     -h|--help)
@@ -96,6 +97,6 @@ python sort_files.py --source-directory "$TMP_MDX_OUTPUT_DIR" --output "$MDX_OUT
 
 python rename_files.py --source-directory "$MDX_OUTPUT_DIR/"
 
-echo "Copying generated docs to $DOCS_REPO/models/ref/python/..."
+echo "Copying generated docs to $DOCS_REPO_DIR/models/ref/python/..."
 
-cp -r ./python/* $DOCS_REPO/models/ref/python/
+cp -r ./python/* $DOCS_REPO_DIR/models/ref/python/
