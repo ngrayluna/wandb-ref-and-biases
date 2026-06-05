@@ -5,10 +5,17 @@ REPO_URL="https://github.com/wandb/wandb.git"
 REPO_DIR="../wandb"
 DOCS_REPO_DIR="../docs"
 RELEASE_TAG=""
+
+# Python SDK-specific variables
 JSON_NAMESPACES_DIR="./objects_found"
 JSON_DOC_ENTRIES_DIR="./docs_json"
 TMP_MDX_OUTPUT_DIR="./mdx_output"
 MDX_OUTPUT_DIR="./python"
+
+
+## CLI-specific variables
+CLI_OUTPUT_JSON="source_info.json"
+CLI_OUTPUT_DIR="cli"
 
 
 usage() {
@@ -100,3 +107,15 @@ python rename_files.py --source-directory "$MDX_OUTPUT_DIR/"
 echo "Copying generated docs to $DOCS_REPO_DIR/models/ref/python/..."
 
 cp -r ./python/* $DOCS_REPO_DIR/models/ref/python/
+
+echo "Generating CLI docs..."
+
+# Create output directory if it doesn't exist
+# If it does exist, clear it out to avoid stale files from previous runs
+if [ -d "$CLI_OUTPUT_DIR" ]; then
+    rm -rf "$CLI_OUTPUT_DIR"/*
+else
+    mkdir -p "$CLI_OUTPUT_DIR"
+fi
+
+python sort_markdown.py --output-markdown "$CLI_OUTPUT_DIR" --source-info "$CLI_OUTPUT_JSON"
