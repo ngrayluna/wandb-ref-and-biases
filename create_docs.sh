@@ -118,4 +118,14 @@ else
     mkdir -p "$CLI_OUTPUT_DIR"
 fi
 
+# Generate source info JSON (for source links in docs)
+python get_public_commands.py --output-json "$CLI_OUTPUT_JSON"
+
+# Extract command names from JSON and create .mdx files
+if [ -n "$RELEASE_TAG" ]; then
+    python create_mdx_file.py --source-info "$CLI_OUTPUT_JSON" --output-dir "$CLI_OUTPUT_DIR" --release-tag "$RELEASE_TAG"
+else
+    python create_mdx_file.py --source-info "$CLI_OUTPUT_JSON" --output-dir "$CLI_OUTPUT_DIR"
+fi
+
 python sort_markdown.py --output-markdown "$CLI_OUTPUT_DIR" --source-info "$CLI_OUTPUT_JSON"
