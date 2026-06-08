@@ -5,9 +5,12 @@ Usage: python create_mdx_file.py --json-file source_info_debug.json
 import argparse
 import re
 import json
+from pathlib import Path
 import textwrap
 from typing import Optional
+import sys
 
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from utils.template import CLI_COMMAND_TEMPLATE, CLI_GROUP_TEMPLATE
 from utils.markdown import format_github_button, github_import_statement
 

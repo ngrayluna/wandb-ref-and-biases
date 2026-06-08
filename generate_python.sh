@@ -1,8 +1,9 @@
-#!/usr/bin/env bash
+#!/bin/bash
 set -euo pipefail
 
-REPO_URL="https://github.com/wandb/wandb.git"
-REPO_DIR="../wandb"
+# Shared repo setup (REPO_URL, REPO_DIR, prepare_repo).
+source "$(dirname "$0")/lib/common.sh"
+
 DOCS_REPO_DIR="../docs"
 RELEASE_TAG=""
 
@@ -83,38 +84,8 @@ fi
 
 
 
-if [[ -n "$RELEASE_TAG" ]]; then
-  if [[ -d "$REPO_DIR/.git" ]]; then
-    echo "Fetching tags in $REPO_DIR..."
-    git -C "$REPO_DIR" fetch --tags origin
-  else
-    echo "Cloning $REPO_URL into $REPO_DIR..."
-    mkdir -p "$(dirname "$REPO_DIR")"
-    git clone "$REPO_URL" "$REPO_DIR"
-  fi
-
-  echo "Checking out $RELEASE_TAG..."
-  git -C "$REPO_DIR" checkout --force "$RELEASE_TAG"
-else
-  echo "Using local repo at $REPO_DIR..."
-
-  if [[ ! -d "$REPO_DIR/.git" ]]; then
-    echo "Error: $REPO_DIR is not a Git repository." >&2
-    echo "Pass --repo-dir PATH for local testing, or --tag TAG to clone/check out a release." >&2
-    exit 1
-  fi
-fi
-
-# Get the absolute path to the repo root
-REPO_ROOT="$(git -C "$REPO_DIR" rev-parse --show-toplevel)"
-
-if [[ ! -d "$REPO_ROOT/wandb" ]]; then
-  echo "Error: expected Python package directory not found: $REPO_ROOT/wandb" >&2
-  exit 1
-fi
-
-# Set PYTHONPATH to include the repo root so that the scripts can import the package modules
-export PYTHONPATH="$REPO_ROOT${PYTHONPATH:+:$PYTHONPATH}"
+# Clone/checkout the wandb repo and export PYTHONPATH (sets REPO_ROOT).
+prepare_repo "$RELEASE_TAG" "$REPO_DIR"
 
 # Run the Python scripts to generate the docs
 python ./python_ref/get_python_objects.py --output-dir="$JSON_NAMESPACES_DIR"
