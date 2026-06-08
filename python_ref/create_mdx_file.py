@@ -6,11 +6,13 @@ import re
 import argparse
 import glob
 import json
+from pathlib import Path
 from typing import Optional
+import sys
 
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from utils.template import CLASS_TEMPLATE, FUNCTION_TEMPLATE
 from utils.markdown import format_github_button, github_import_statement
-
 
 def build_description_section(description: str) -> str:
     """Build the Description markdown section, or empty string if no description."""

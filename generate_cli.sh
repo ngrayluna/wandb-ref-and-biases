@@ -21,13 +21,13 @@
 
 set -e  # Exit on error
 
-RELEASE_TAG="${1:-}"
 REPO_URL="https://github.com/wandb/wandb.git"
-REPO_DIR="wandb"
+REPO_DIR="../wandb"
+RELEASE_TAG="${1:-}"
 
-OUTPUT_JSON="source_info.json"
-OUTPUT_DIR="cli_output"
-MDX_OUTPUT_DIR="${2:-output}"
+OUTPUT_JSON="./artifacts/cli_source_info.json"
+TMP_OUTPUT_DIR="./artifacts/cli_mdx_output"
+MDX_OUTPUT_DIR="./generated/cli"
 
 if [ -n "$RELEASE_TAG" ]; then
     # Clone or update the wandb repository
@@ -56,27 +56,29 @@ export PYTHONPATH="$PWD/$REPO_DIR:$PYTHONPATH"
 
 # Create output directory if it doesn't exist
 # If it does exist, clear it out to avoid stale files from previous runs
-if [ -d "$OUTPUT_DIR" ]; then
-    rm -rf "$OUTPUT_DIR"/*
+if [ -d "$TMP_OUTPUT_DIR" ]; then
+    rm -rf "$TMP_OUTPUT_DIR"/*
 else
-    mkdir -p "$OUTPUT_DIR"
+    mkdir -p "$TMP_OUTPUT_DIR"
 fi
 
 # Generate source info JSON (for source links in docs)
-python get_public_commands.py --output-json "$OUTPUT_JSON"
+python ./cli_ref/get_public_commands.py --output-json "$OUTPUT_JSON"
 
 # Extract command names from JSON and create .mdx files
 if [ -n "$RELEASE_TAG" ]; then
-    python create_mdx_file.py --source-info "$OUTPUT_JSON" --output-dir "$OUTPUT_DIR" --release-tag "$RELEASE_TAG"
+    python ./cli_ref/create_mdx_file.py --source-info "$OUTPUT_JSON" --output-dir "$TMP_OUTPUT_DIR" --release-tag "$RELEASE_TAG"
 else
-    python create_mdx_file.py --source-info "$OUTPUT_JSON" --output-dir "$OUTPUT_DIR"
+    python ./cli_ref/create_mdx_file.py --source-info "$OUTPUT_JSON" --output-dir "$TMP_OUTPUT_DIR"
 fi
 
-python sort_markdown.py --output-markdown "$OUTPUT_DIR" --source-info "$OUTPUT_JSON"
+python ./cli_ref/sort_markdown.py --output-markdown "$TMP_OUTPUT_DIR" --source-info "$OUTPUT_JSON"
 
-if [ -n "$MDX_OUTPUT_DIR" ]; then
-    # Copy .mdx files to the specified output directory.
-    mkdir -p "$MDX_OUTPUT_DIR"
-    cp -r "$OUTPUT_DIR"/* "$MDX_OUTPUT_DIR/"
-    echo "Copied .mdx files to $MDX_OUTPUT_DIR/."
+if [ -d "$MDX_OUTPUT_DIR" ]; then
+    rm -rf "$MDX_OUTPUT_DIR"/*
+else        
+    mkdir -p "$MDX_OUTPUT_DIR" 
 fi
+
+echo "Copying .mdx files to $MDX_OUTPUT_DIR"
+cp -r "$TMP_OUTPUT_DIR"/* "$MDX_OUTPUT_DIR/"

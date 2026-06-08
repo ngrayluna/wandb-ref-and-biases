@@ -35,17 +35,17 @@ Usage:
     python get_python_objects.py --output-dir=./output
 """
 from __future__ import annotations
-
 import argparse
-import json
-
 import ast
 from dataclasses import asdict
+import json
 from pathlib import Path
+import sys
 
-import config
 from generator.models import ExportedName
 
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+import config
 
 def parse_public_exports(path: Path, namespace: str) -> list[ExportedName]:
     """Parse a module file and return end-user-facing exported names.
