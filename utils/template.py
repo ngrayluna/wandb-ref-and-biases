@@ -12,6 +12,7 @@ namespace: {namespace}
 {import_statements}
 {github_path}
 
+{function_title}
 {signature}
 
 {description}
@@ -37,6 +38,7 @@ namespace: {namespace}
 {import_statements}
 {github_path}
 
+{class_title}
 {signature}
 
 {description}

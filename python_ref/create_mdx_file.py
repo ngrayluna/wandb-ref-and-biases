@@ -36,10 +36,21 @@ def build_method_arguments_section(arguments: list[dict]) -> str:
 
 def build_returns_section(returns: list[dict]) -> str:
     """Build the Returns markdown section, or empty string if no return value."""
+    type_name = returns[0].get("type_name") if returns else ""
+    description = returns[0].get("description") if returns else ""
+
     if not returns:
         return ""
-    formatted_returns = "".join(format_returns_row(ret) for ret in returns)
-    return f"## Returns\n\n{formatted_returns}"
+    if description and description.startswith("_"):
+        return ""
+    
+    if type_name == "" or type_name == "return":
+        section = f"{description}"
+    else:
+        section = f"`{type_name}`: {description}\n"
+
+    #formatted_returns = "".join(format_returns_row(ret) for ret in returns)
+    return f"## Returns\n\n{section}"
 
 def build_raises_section(raises: list[dict]) -> str:
     """Build the Raises markdown section, or empty string if no exceptions raised."""
@@ -105,10 +116,13 @@ def format_raises_row(raise_: dict) -> str:
     """Format a single exception row for the Raises section."""
     name = raise_.get("name", "")
     description = raise_.get("description", "")
-    return f"- **{name}**: {description}\n"
+    return f"- `{name}`: {description}\n"
 
 def format_methods_row(method: dict) -> str:
     """Format a single method row for the Methods section."""
+    if method.get("qualname").startswith("Attrs"):
+        return ""  # Skip methods from the Attrs library, as they are not relevant for end users.
+
     name = method.get("name", "")
     description = method.get("description", "")
     signature = build_signature_block(method.get("signature", ""))
@@ -127,18 +141,8 @@ def format_argument_row(argument: dict) -> str:
     """Format a single argument row for the Arguments section."""
     name = argument.get("name", "")
     description = argument.get("description", "")
-    return f"- **{name}**: {description}\n"
+    return f"- `{name}`: {description}\n"
 
-def format_returns_row(return_value: dict) -> str:
-    """Format a single return value row for the Returns section."""
-    type_name = return_value.get("type_name", "")
-    description = return_value.get("description", "")
-    if type_name == "":
-        return f"{description}"
-    elif type_name == "return":
-        return f"{description}"
-    else:
-        return f"`{type_name}`: {description}\n"
 
 def format_signature_block(signature: str) -> str:
     """Return the signature string formatted with line breaks for readability,
@@ -165,6 +169,14 @@ def format_signature_block(signature: str) -> str:
 
     return ",\n".join(parts)
 
+def format_function_page_title(name: str) -> str:
+    """Format the function title for the MDX file."""
+    return f"## <kbd>function</kbd> {name}"
+
+def format_class_page_title(name: str) -> str:
+    """Format the class title for the MDX file."""
+    return f"## <kbd>class</kbd> {name}"
+
 
 def internal_use_only(doc_entry: dict) -> bool:
     """Check if the doc entry is marked for internal use based on the presence of 'lazydoc' in the description.
@@ -187,6 +199,7 @@ def generate_class_mdx_content(doc_entry: dict, release_tag: Optional[str] = Non
         name=doc_entry.get("public_name", ""),
         kind=doc_entry.get("kind", ""),
         namespace=doc_entry.get("defining_module", ""),
+        class_title=format_class_page_title(doc_entry.get("public_name", "")),
         description=build_description_section(doc_entry.get("description", "")),
         signature=build_signature_block(doc_entry.get("signature", ""),),
         arguments_section=build_arguments_section(doc_entry.get("arguments", []),),
@@ -208,6 +221,7 @@ def generate_function_mdx_content(doc_entry: dict, release_tag: Optional[str] = 
         name=doc_entry.get("name", ""),
         kind=doc_entry.get("kind", ""),
         namespace=doc_entry.get("defining_module", ""),
+        function_title=format_function_page_title(doc_entry.get('name', '')),
         description=build_description_section(doc_entry.get("description", "")),
         signature=build_signature_block(doc_entry.get("signature", "")),
         arguments_section=build_arguments_section(doc_entry.get("arguments", [])),
