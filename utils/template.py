@@ -4,7 +4,7 @@ These templates are used to create structured documentation for functions, class
 """
 ## Template for individual functions (not Class methods)## 
 FUNCTION_TEMPLATE = """---
-title: {name}
+title: {name}()
 kind: {kind}
 namespace: {namespace}
 ---

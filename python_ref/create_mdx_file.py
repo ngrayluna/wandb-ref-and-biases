@@ -135,8 +135,10 @@ def format_returns_row(return_value: dict) -> str:
     description = return_value.get("description", "")
     if type_name == "":
         return f"{description}"
+    elif type_name == "return":
+        return f"{description}"
     else:
-        return f"- **{type_name}**: {description}\n"
+        return f"`{type_name}`: {description}\n"
 
 def format_signature_block(signature: str) -> str:
     """Return the signature string formatted with line breaks for readability,

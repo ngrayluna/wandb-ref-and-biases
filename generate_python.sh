@@ -98,6 +98,6 @@ python ./python_ref/sort_files.py --source-directory "$TMP_MDX_OUTPUT_DIR" --out
 
 python ./python_ref/rename_files.py --source-directory "$MDX_OUTPUT_DIR/"
 
-# echo "Copying generated docs to $DOCS_REPO_DIR/models/ref/python/..."
+echo "Copying generated docs to $DOCS_REPO_DIR/models/ref/python/..."
 
-# cp -r $MDX_OUTPUT_DIR/* $DOCS_REPO_DIR/models/ref/python/
+cp -r $MDX_OUTPUT_DIR/* $DOCS_REPO_DIR/models/ref/python/
