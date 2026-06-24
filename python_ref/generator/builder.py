@@ -226,6 +226,12 @@ def build_class_doc(item: DocumentableObject) -> ClassDoc:
     """Build a docs-ready record for a public class."""
     parsed = parse_docstring(item.docstring)
 
+    # Use the parsed docstring from the class itself, but also parse the __init__ method's docstring for argument docs.
+    class_parsed = parse_docstring(item.docstring)
+    init_parsed = parse_docstring(inspect.getdoc(item.obj.__init__))
+
+    argument_docs = init_parsed.arguments or class_parsed.arguments
+
     return ClassDoc(
         public_name=item.public_name,
         qualname=item.qualname or item.public_name,
@@ -238,7 +244,7 @@ def build_class_doc(item: DocumentableObject) -> ClassDoc:
         line_number=item.line_number,
         import_statement=item.import_statement,
         signature=item.signature,
-        arguments=build_argument_docs(item.obj, parsed.arguments),
+        arguments=build_argument_docs(item.obj, argument_docs),
         properties=collect_class_properties(item.obj),
         methods=collect_class_methods(item.obj),
         raises=parsed.raises,

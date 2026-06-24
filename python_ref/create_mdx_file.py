@@ -131,7 +131,7 @@ def validate_source_file(source_file: str) -> bool:
         bool: True if the source file should be included; False otherwise.
     """
     #TODO: Consider making this a configurable list of paths to ignore, or using a more robust method for determining internal vs. public modules.
-    filepaths_to_ignore = ["/data_types/base_types/", "/site-packages/pydantic/", "/apis/attrs.py"]
+    filepaths_to_ignore = ["/data_types/base_types/", "/pydantic/", "/_pydantic/" , "/apis/attrs.py"]
     if any(ignore_path in source_file for ignore_path in filepaths_to_ignore):
         return False
 
