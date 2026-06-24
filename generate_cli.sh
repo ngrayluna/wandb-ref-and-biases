@@ -10,6 +10,7 @@ set -e  # Exit on error
 # Shared repo setup (REPO_URL, REPO_DIR, prepare_repo).
 source "$(dirname "$0")/lib/common.sh"
 
+DOCS_REPO_DIR="../docs"
 RELEASE_TAG="${1:-}"
 
 OUTPUT_JSON="./artifacts/cli_source_info.json"
@@ -37,6 +38,12 @@ else
     mkdir -p "$TMP_OUTPUT_DIR"
 fi
 
+if [ -d "$MDX_OUTPUT_DIR" ]; then
+    rm -rf "$MDX_OUTPUT_DIR"/*
+else        
+    mkdir -p "$MDX_OUTPUT_DIR" 
+fi
+
 # Generate source info JSON (for source links in docs)
 python ./cli_ref/get_public_commands.py --output-json "$OUTPUT_JSON"
 
@@ -49,11 +56,10 @@ fi
 
 python ./cli_ref/sort_markdown.py --output-markdown "$TMP_OUTPUT_DIR" --source-info "$OUTPUT_JSON"
 
-if [ -d "$MDX_OUTPUT_DIR" ]; then
-    rm -rf "$MDX_OUTPUT_DIR"/*
-else        
-    mkdir -p "$MDX_OUTPUT_DIR" 
-fi
 
-echo "Copying .mdx files to $MDX_OUTPUT_DIR"
+# Store in temporary directory first, then copy to final output dir to avoid partial output in case of errors
 cp -r "$TMP_OUTPUT_DIR"/* "$MDX_OUTPUT_DIR/"
+
+# Copy generated .mdx files to the docs repo
+echo "Copying .mdx files to $DOCS_REPO_DIR/models/ref/cli/"
+cp -r "$MDX_OUTPUT_DIR"/* "$DOCS_REPO_DIR/models/ref/cli/"

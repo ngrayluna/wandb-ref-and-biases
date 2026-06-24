@@ -4,7 +4,7 @@ These templates are used to create structured documentation for functions, class
 """
 ## Template for individual functions (not Class methods)## 
 FUNCTION_TEMPLATE = """---
-title: {name}
+title: {name}()
 kind: {kind}
 namespace: {namespace}
 ---
@@ -12,6 +12,7 @@ namespace: {namespace}
 {import_statements}
 {github_path}
 
+{function_title}
 {signature}
 
 {description}
@@ -37,6 +38,7 @@ namespace: {namespace}
 {import_statements}
 {github_path}
 
+{class_title}
 {signature}
 
 {description}
