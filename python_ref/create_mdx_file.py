@@ -36,6 +36,7 @@ def build_method_arguments_section(arguments: list[dict]) -> str:
 
 def build_returns_section(returns: list[dict]) -> str:
     """Build the Returns markdown section, or empty string if no return value."""
+    # TODO:  Check logic for handling multiple return values. Currently, only the first return value is used.
     type_name = returns[0].get("type_name") if returns else ""
     description = returns[0].get("description") if returns else ""
 
@@ -95,7 +96,10 @@ def build_methods_section(methods: list[dict]) -> str:
     """Build the Methods markdown section for a class, or empty string if no methods."""
     if not methods:
         return ""
-    formatted_methods = "".join(format_methods_row(method) for method in methods if not internal_use_only(method))
+    formatted_methods = "".join(format_methods_row(method) for method in methods if not internal_use_only(method) and validate_source_file(method.get("source_file", "")))
+    if formatted_methods == "":
+        return ""
+
     return f"## Methods\n\n{formatted_methods}"
 
 def build_properties_section(properties: list[dict]) -> str:
@@ -118,11 +122,24 @@ def format_raises_row(raise_: dict) -> str:
     description = raise_.get("description", "")
     return f"- `{name}`: {description}\n"
 
+
+def validate_source_file(source_file: str) -> bool:
+    """Check if the source file should be included based on its path. Exclude files in certain directories.
+    Args:
+        source_file (str): The path to the source file.
+    Returns:
+        bool: True if the source file should be included; False otherwise.
+    """
+    #TODO: Consider making this a configurable list of paths to ignore, or using a more robust method for determining internal vs. public modules.
+    filepaths_to_ignore = ["/data_types/base_types/", "/site-packages/pydantic/", "/apis/attrs.py"]
+    if any(ignore_path in source_file for ignore_path in filepaths_to_ignore):
+        return False
+
+    return True
+
+
 def format_methods_row(method: dict) -> str:
     """Format a single method row for the Methods section."""
-    if method.get("qualname").startswith("Attrs"):
-        return ""  # Skip methods from the Attrs library, as they are not relevant for end users.
-
     name = method.get("name", "")
     description = method.get("description", "")
     signature = build_signature_block(method.get("signature", ""))
