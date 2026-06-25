@@ -97,6 +97,71 @@ def build_argument_docs(
 
     return arguments
 
+def build_pydantic_argument_docs(cls: type[Any]) -> list[ArgumentDoc]:
+    """Build argument docs from Pydantic model field descriptions."""
+    model_fields = getattr(cls, "model_fields", None)
+    if not model_fields:
+        return []
+
+    try:
+        signature = inspect.signature(cls)
+    except (TypeError, ValueError):
+        return []
+
+    signature_names = set(signature.parameters)
+    arguments: list[ArgumentDoc] = []
+
+    for field_name, field in model_fields.items():
+        public_name = _pydantic_public_field_name(field_name, field, signature_names)
+        if public_name not in signature_names:
+            continue
+
+        description = getattr(field, "description", None) or ""
+        arguments.append(
+            ArgumentDoc(
+                name=public_name,
+                description=description,
+                internal_use=check_lazydoc(description),
+            )
+        )
+
+    return arguments
+
+def _pydantic_public_field_name(
+    field_name: str,
+    field: Any,
+    signature_names: set[str],
+) -> str:
+    """Return the constructor-facing name for a Pydantic model field.
+
+    Pydantic fields can be exposed under an alias that differs from the Python
+    attribute name. Prefer the first field alias that appears in the class
+    signature so argument docs attach to the name users actually pass.
+    """
+    for candidate in (
+        getattr(field, "validation_alias", None),
+        getattr(field, "alias", None),
+        getattr(field, "serialization_alias", None),
+        field_name,
+    ):
+        if isinstance(candidate, str) and candidate in signature_names:
+            return candidate
+
+    return field_name
+
+def collect_class_argument_docs(cls: type[Any], parsed_class: ParsedDocstring) -> list[ArgumentDoc]:
+    """Collect class argument docs from the best available source."""
+    pydantic_arguments = build_pydantic_argument_docs(cls)
+    if pydantic_arguments:
+        return pydantic_arguments
+
+    init_docstring = inspect.getdoc(cls.__init__)
+    parsed_init = parse_docstring(init_docstring)
+    if parsed_init.arguments:
+        return parsed_init.arguments
+
+    return parsed_class.arguments
+
 
 def build_default_return_docs(obj: Any) -> list[ReturnDoc]:
     """Build a fallback return doc from annotations when possible."""
@@ -224,7 +289,10 @@ def build_function_doc(item: DocumentableObject) -> FunctionDoc:
 
 def build_class_doc(item: DocumentableObject) -> ClassDoc:
     """Build a docs-ready record for a public class."""
+
+    # Find out how the class is documented: Pydantic model fields, __init__ docstring, or class docstring.
     parsed = parse_docstring(item.docstring)
+    arguments = collect_class_argument_docs(item.obj, parsed)
 
     return ClassDoc(
         public_name=item.public_name,
@@ -238,7 +306,7 @@ def build_class_doc(item: DocumentableObject) -> ClassDoc:
         line_number=item.line_number,
         import_statement=item.import_statement,
         signature=item.signature,
-        arguments=build_argument_docs(item.obj, parsed.arguments),
+        arguments=build_argument_docs(item.obj, arguments),
         properties=collect_class_properties(item.obj),
         methods=collect_class_methods(item.obj),
         raises=parsed.raises,
