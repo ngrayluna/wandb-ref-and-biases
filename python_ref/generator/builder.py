@@ -132,6 +132,12 @@ def _pydantic_public_field_name(
     field: Any,
     signature_names: set[str],
 ) -> str:
+    """Return the constructor-facing name for a Pydantic model field.
+
+    Pydantic fields can be exposed under an alias that differs from the Python
+    attribute name. Prefer the first field alias that appears in the class
+    signature so argument docs attach to the name users actually pass.
+    """
     for candidate in (
         getattr(field, "validation_alias", None),
         getattr(field, "alias", None),
