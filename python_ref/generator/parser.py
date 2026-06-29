@@ -206,6 +206,8 @@ def check_lazydoc(description: str) -> bool:
     return "lazydoc" in description
 
 
+# Args need stricter field detection than Returns/Raises: prose inside an arg
+# can contain colons, while return types may be expressions like dict[str, Any].
 def _looks_like_arg_field(line: str) -> bool:
     """Return True if a line looks like an Args/Parameters field."""
     if ":" not in line:
