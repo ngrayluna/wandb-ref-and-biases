@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import inspect
+import re
 import textwrap
 
 from generator.models import (
@@ -71,6 +72,7 @@ def parse_argument_block(lines: list[str]) -> list[ArgumentDoc]:
     """Parse an Args/Parameters-style block."""
     arguments: list[ArgumentDoc] = []
     current_name: str | None = None
+    current_indent = 0
     current_description: list[str] = []
 
     for raw_line in lines:
@@ -92,11 +94,14 @@ def parse_argument_block(lines: list[str]) -> list[ArgumentDoc]:
 
             field_name, description = _split_doc_field(stripped)
             current_name = field_name
+            current_indent = _line_indent(raw_line)
             current_description = [description] if description else []
             continue
 
         if current_name is not None:
-            current_description.append(stripped)
+            current_description.append(
+                _description_continuation(raw_line, current_indent)
+            )
 
     if current_name is not None:
         description = _join_description_lines(current_description)
@@ -204,7 +209,10 @@ def _looks_like_doc_field(line: str) -> bool:
         return False
 
     left, _right = line.split(":", 1)
-    return bool(left.strip())
+    field_name = left.strip()
+    return bool(
+        re.fullmatch(r"\*{0,2}[A-Za-z_][\w.]*\s*(?:\([^)]*\))?", field_name)
+    )
 
 
 def _split_doc_field(line: str) -> tuple[str, str]:
@@ -227,4 +235,28 @@ def _normalize_block(lines: list[str]) -> str:
 
 def _join_description_lines(lines: list[str]) -> str:
     """Join multiple description lines into readable prose."""
-    return " ".join(part.strip() for part in lines if part.strip()).strip()
+    parts = [part.rstrip() for part in lines if part.strip()]
+    if any(_looks_like_markdown_list_item(part.strip()) for part in parts):
+        return "\n".join(parts).strip()
+
+    return " ".join(part.strip() for part in parts).strip()
+
+
+def _looks_like_markdown_list_item(line: str) -> bool:
+    """Return True if a line starts a markdown list item."""
+    return line.startswith(("- ", "* ", "+ "))
+
+
+def _line_indent(line: str) -> int:
+    """Return the number of leading spaces in a line."""
+    return len(line) - len(line.lstrip(" "))
+
+
+def _description_continuation(line: str, field_indent: int) -> str:
+    """Return continuation text relative to the parent doc field."""
+    stripped = line.rstrip()
+    content_indent = field_indent + 4
+    if _line_indent(stripped) >= content_indent:
+        return stripped[content_indent:]
+
+    return stripped.strip()
