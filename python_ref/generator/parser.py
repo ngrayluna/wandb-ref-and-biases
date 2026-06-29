@@ -82,7 +82,7 @@ def parse_argument_block(lines: list[str]) -> list[ArgumentDoc]:
         if not stripped:
             continue
 
-        if _looks_like_doc_field(stripped) and (
+        if _looks_like_arg_field(stripped) and (
             current_name is None or indent <= current_indent
         ):
             if current_name is not None:
@@ -131,7 +131,7 @@ def parse_raises_block(lines: list[str]) -> list[RaisesDoc]:
         if not stripped:
             continue
 
-        if _looks_like_doc_field(stripped):
+        if _looks_like_type_field(stripped):
             if name is not None:
                 raises.append(
                     RaisesDoc(
@@ -170,7 +170,7 @@ def parse_return_block(lines: list[str]) -> list[ReturnDoc]:
         if not stripped:
             continue
 
-        if _looks_like_doc_field(stripped):
+        if _looks_like_type_field(stripped):
             if current_name is not None or current_description:
                 returns.append(
                     ReturnDoc(
@@ -206,8 +206,8 @@ def check_lazydoc(description: str) -> bool:
     return "lazydoc" in description
 
 
-def _looks_like_doc_field(line: str) -> bool:
-    """Return True if a line looks like a simple doc field entry."""
+def _looks_like_arg_field(line: str) -> bool:
+    """Return True if a line looks like an Args/Parameters field."""
     if ":" not in line:
         return False
 
@@ -219,6 +219,15 @@ def _looks_like_doc_field(line: str) -> bool:
             field_name,
         )
     )
+
+
+def _looks_like_type_field(line: str) -> bool:
+    """Return True if a line looks like a Returns/Raises field."""
+    if ":" not in line:
+        return False
+
+    left, _right = line.split(":", 1)
+    return bool(left.strip())
 
 
 def _split_doc_field(line: str) -> tuple[str, str]:
