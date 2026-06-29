@@ -140,13 +140,13 @@ def validate_source_file(source_file: str) -> bool:
 
 def format_methods_row(method: dict) -> str:
     """Format a single method row for the Methods section."""
-    name = method.get("name", "")
+    full_name = method.get("qualname", "")
     description = method.get("description", "")
     signature = build_signature_block(method.get("signature", ""))
     arguments = build_method_arguments_section(method.get("arguments", []))
     raises = build_method_raises_section(method.get("raises", []))
     examples = build_method_examples_section(method.get("examples", ""))
-    return f"### <kbd>method</kbd> {name}\n\n{signature}\n\n{description}\n\n{arguments}\n\n{raises}\n\n{examples}"
+    return f"### <kbd>method</kbd> {full_name}()\n\n{signature}\n\n{description}\n\n{arguments}\n\n{raises}\n\n{examples}"
 
 def format_property_row(property_doc: dict) -> str:
     """Format a single property row for the Properties section."""
