@@ -206,6 +206,8 @@ def collect_class_properties(cls: type[Any]) -> list[PropertyDoc]:
     """Collect public properties defined directly on a class."""
     properties: list[PropertyDoc] = []
 
+    # This only documents properties defined directly on the class. Use
+    # inspect.getmembers(cls) here if inherited properties should be included.
     for name, member in cls.__dict__.items():
         if name.startswith("_"):
             continue
@@ -225,7 +227,7 @@ def collect_class_properties(cls: type[Any]) -> list[PropertyDoc]:
             )
         )
 
-    return properties
+    return sorted(properties, key=lambda prop: prop.name.casefold())
 
 
 def collect_class_methods(cls: type[Any]) -> list[MethodDoc]:
