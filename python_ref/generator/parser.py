@@ -77,11 +77,14 @@ def parse_argument_block(lines: list[str]) -> list[ArgumentDoc]:
 
     for raw_line in lines:
         stripped = raw_line.rstrip().strip()
+        indent = _line_indent(raw_line)
 
         if not stripped:
             continue
 
-        if _looks_like_doc_field(stripped):
+        if _looks_like_doc_field(stripped) and (
+            current_name is None or indent <= current_indent
+        ):
             if current_name is not None:
                 description = _join_description_lines(current_description)
                 arguments.append(
@@ -94,7 +97,7 @@ def parse_argument_block(lines: list[str]) -> list[ArgumentDoc]:
 
             field_name, description = _split_doc_field(stripped)
             current_name = field_name
-            current_indent = _line_indent(raw_line)
+            current_indent = indent
             current_description = [description] if description else []
             continue
 
@@ -211,7 +214,10 @@ def _looks_like_doc_field(line: str) -> bool:
     left, _right = line.split(":", 1)
     field_name = left.strip()
     return bool(
-        re.fullmatch(r"\*{0,2}[A-Za-z_][\w.]*\s*(?:\([^)]*\))?", field_name)
+        re.fullmatch(
+            r"\*{0,2}[A-Za-z_][\w.]*\s*(?:\([^)]*\))?\s*(?:=\s*[^:]+)?",
+            field_name,
+        )
     )
 
 
@@ -223,6 +229,8 @@ def _split_doc_field(line: str) -> tuple[str, str]:
 
     if "(" in name:
         name = name.split("(", 1)[0].strip()
+    elif "=" in name:
+        name = name.split("=", 1)[0].strip()
 
     return name, description
 
