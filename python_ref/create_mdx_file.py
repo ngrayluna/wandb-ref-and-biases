@@ -159,7 +159,7 @@ def format_argument_row(argument: dict) -> str:
     name = argument.get("name", "")
     description = argument.get("description", "")
     if not description:
-        return f"- `{name}`\n"
+        return f"- `{name}`: \n"
 
     return f"- `{name}`: {indent_markdown_list_item_text(description)}\n"
 
