@@ -158,7 +158,22 @@ def format_argument_row(argument: dict) -> str:
     """Format a single argument row for the Arguments section."""
     name = argument.get("name", "")
     description = argument.get("description", "")
-    return f"- `{name}`: {description}\n"
+    if not description:
+        return f"- `{name}`: \n"
+
+    return f"- `{name}`: {indent_markdown_list_item_text(description)}\n"
+
+
+def indent_markdown_list_item_text(text: str) -> str:
+    """Indent multiline text so it stays inside its parent markdown list item."""
+    lines = text.splitlines()
+    if len(lines) <= 1:
+        return text
+
+    first_line, *remaining_lines = lines
+    indented_lines = [first_line]
+    indented_lines.extend(f"    {line}" if line else "" for line in remaining_lines)
+    return "\n".join(indented_lines)
 
 
 def format_signature_block(signature: str) -> str:

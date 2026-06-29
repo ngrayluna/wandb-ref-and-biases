@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import inspect
+import re
 import textwrap
 
 from generator.models import (
@@ -71,15 +72,19 @@ def parse_argument_block(lines: list[str]) -> list[ArgumentDoc]:
     """Parse an Args/Parameters-style block."""
     arguments: list[ArgumentDoc] = []
     current_name: str | None = None
+    current_indent = 0
     current_description: list[str] = []
 
     for raw_line in lines:
         stripped = raw_line.rstrip().strip()
+        indent = _line_indent(raw_line)
 
         if not stripped:
             continue
 
-        if _looks_like_doc_field(stripped):
+        if _looks_like_arg_field(stripped) and (
+            current_name is None or indent <= current_indent
+        ):
             if current_name is not None:
                 description = _join_description_lines(current_description)
                 arguments.append(
@@ -92,11 +97,14 @@ def parse_argument_block(lines: list[str]) -> list[ArgumentDoc]:
 
             field_name, description = _split_doc_field(stripped)
             current_name = field_name
+            current_indent = indent
             current_description = [description] if description else []
             continue
 
         if current_name is not None:
-            current_description.append(stripped)
+            current_description.append(
+                _description_continuation(raw_line, current_indent)
+            )
 
     if current_name is not None:
         description = _join_description_lines(current_description)
@@ -123,7 +131,7 @@ def parse_raises_block(lines: list[str]) -> list[RaisesDoc]:
         if not stripped:
             continue
 
-        if _looks_like_doc_field(stripped):
+        if _looks_like_type_field(stripped):
             if name is not None:
                 raises.append(
                     RaisesDoc(
@@ -162,7 +170,7 @@ def parse_return_block(lines: list[str]) -> list[ReturnDoc]:
         if not stripped:
             continue
 
-        if _looks_like_doc_field(stripped):
+        if _looks_like_type_field(stripped):
             if current_name is not None or current_description:
                 returns.append(
                     ReturnDoc(
@@ -198,8 +206,25 @@ def check_lazydoc(description: str) -> bool:
     return "lazydoc" in description
 
 
-def _looks_like_doc_field(line: str) -> bool:
-    """Return True if a line looks like a simple doc field entry."""
+# Args need stricter field detection than Returns/Raises: prose inside an arg
+# can contain colons, while return types may be expressions like dict[str, Any].
+def _looks_like_arg_field(line: str) -> bool:
+    """Return True if a line looks like an Args/Parameters field."""
+    if ":" not in line:
+        return False
+
+    left, _right = line.split(":", 1)
+    field_name = left.strip()
+    return bool(
+        re.fullmatch(
+            r"\*{0,2}[A-Za-z_][\w.]*\s*(?:\([^)]*\))?\s*(?:=\s*[^:]+)?",
+            field_name,
+        )
+    )
+
+
+def _looks_like_type_field(line: str) -> bool:
+    """Return True if a line looks like a Returns/Raises field."""
     if ":" not in line:
         return False
 
@@ -215,6 +240,8 @@ def _split_doc_field(line: str) -> tuple[str, str]:
 
     if "(" in name:
         name = name.split("(", 1)[0].strip()
+    elif "=" in name:
+        name = name.split("=", 1)[0].strip()
 
     return name, description
 
@@ -227,4 +254,28 @@ def _normalize_block(lines: list[str]) -> str:
 
 def _join_description_lines(lines: list[str]) -> str:
     """Join multiple description lines into readable prose."""
-    return " ".join(part.strip() for part in lines if part.strip()).strip()
+    parts = [part.rstrip() for part in lines if part.strip()]
+    if any(_looks_like_markdown_list_item(part.strip()) for part in parts):
+        return "\n".join(parts).strip()
+
+    return " ".join(part.strip() for part in parts).strip()
+
+
+def _looks_like_markdown_list_item(line: str) -> bool:
+    """Return True if a line starts a markdown list item."""
+    return line.startswith(("- ", "* ", "+ "))
+
+
+def _line_indent(line: str) -> int:
+    """Return the number of leading spaces in a line."""
+    return len(line) - len(line.lstrip(" "))
+
+
+def _description_continuation(line: str, field_indent: int) -> str:
+    """Return continuation text relative to the parent doc field."""
+    stripped = line.rstrip()
+    content_indent = field_indent + 4
+    if _line_indent(stripped) >= content_indent:
+        return stripped[content_indent:]
+
+    return stripped.strip()
