@@ -17,16 +17,16 @@ from pathlib import Path
 from typing import Any
 
 from generator.builder import (
-    build_attribute_doc,
     build_class_doc,
+    build_exported_object_doc,
     build_function_doc,
     documentable_object_from_export,
 )
 from generator.inspection import resolve_exports
 from generator.models import (
-    AttributeDoc,
     ClassDoc,
     DocumentableObject,
+    ExportedObjectDoc,
     ExportedName,
     FunctionDoc,
 )
@@ -52,7 +52,7 @@ def document_export(
 
 def build_public_doc_entry(
     item: DocumentableObject,
-) -> FunctionDoc | ClassDoc | AttributeDoc:
+) -> FunctionDoc | ClassDoc | ExportedObjectDoc:
     """Build a docs-ready dataclass for one public object."""
     if item.kind == "class":
         return build_class_doc(item)
@@ -60,7 +60,7 @@ def build_public_doc_entry(
     if item.kind in {"function", "builtin", "method"}:
         return build_function_doc(item)
 
-    return build_attribute_doc(item)
+    return build_exported_object_doc(item)
 
 
 

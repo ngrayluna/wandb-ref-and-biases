@@ -7,6 +7,7 @@ import textwrap
 
 from generator.models import (
     ArgumentDoc,
+    ClassAttributeDoc,
     ParsedDocstring,
     RaisesDoc,
     ReturnDoc,
@@ -23,6 +24,7 @@ def parse_docstring(docstring: str | None) -> ParsedDocstring:
 
     description_lines: list[str] = []
     args_lines: list[str] = []
+    attributes_lines: list[str] = []
     returns_lines: list[str] = []
     examples_lines: list[str] = []
     raises_lines: list[str] = []
@@ -34,6 +36,10 @@ def parse_docstring(docstring: str | None) -> ParsedDocstring:
 
         if stripped in {"Args:", "Arguments:", "Parameters:"}:
             current_section = "arguments"
+            continue
+
+        if stripped in {"Attributes:", "Attribute:"}:
+            current_section = "attributes"
             continue
 
         if stripped == "Returns:":
@@ -52,6 +58,8 @@ def parse_docstring(docstring: str | None) -> ParsedDocstring:
             description_lines.append(line)
         elif current_section == "arguments":
             args_lines.append(line)
+        elif current_section == "attributes":
+            attributes_lines.append(line)
         elif current_section == "returns":
             returns_lines.append(line)
         elif current_section == "examples":
@@ -62,6 +70,7 @@ def parse_docstring(docstring: str | None) -> ParsedDocstring:
     return ParsedDocstring(
         description=_normalize_block(description_lines),
         arguments=parse_argument_block(args_lines),
+        attributes=parse_attribute_block(attributes_lines),
         returns=parse_return_block(returns_lines),
         examples=_normalize_block(examples_lines),
         raises=parse_raises_block(raises_lines),
@@ -117,6 +126,61 @@ def parse_argument_block(lines: list[str]) -> list[ArgumentDoc]:
         )
 
     return arguments
+
+
+def parse_attribute_block(lines: list[str]) -> list[ClassAttributeDoc]:
+    """Parse an Attributes-style block from a class docstring."""
+    attributes: list[ClassAttributeDoc] = []
+    current_name: str | None = None
+    current_type_name = ""
+    current_indent = 0
+    current_description: list[str] = []
+
+    for raw_line in lines:
+        stripped = raw_line.rstrip().strip()
+        indent = _line_indent(raw_line)
+
+        if not stripped:
+            continue
+
+        if _looks_like_arg_field(stripped) and (
+            current_name is None or indent <= current_indent
+        ):
+            if current_name is not None:
+                description = _join_description_lines(current_description)
+                attributes.append(
+                    ClassAttributeDoc(
+                        name=current_name,
+                        type_name=current_type_name,
+                        description=description,
+                        internal_use=check_lazydoc(description),
+                    )
+                )
+
+            field_name, type_name, description = _split_attribute_doc_field(stripped)
+            current_name = field_name
+            current_type_name = type_name
+            current_indent = indent
+            current_description = [description] if description else []
+            continue
+
+        if current_name is not None:
+            current_description.append(
+                _description_continuation(raw_line, current_indent)
+            )
+
+    if current_name is not None:
+        description = _join_description_lines(current_description)
+        attributes.append(
+            ClassAttributeDoc(
+                name=current_name,
+                type_name=current_type_name,
+                description=description,
+                internal_use=check_lazydoc(description),
+            )
+        )
+
+    return attributes
 
 
 def parse_raises_block(lines: list[str]) -> list[RaisesDoc]:
@@ -244,6 +308,32 @@ def _split_doc_field(line: str) -> tuple[str, str]:
         name = name.split("=", 1)[0].strip()
 
     return name, description
+
+
+def _split_attribute_doc_field(line: str) -> tuple[str, str, str]:
+    """Split an ``attribute (type): description`` doc line."""
+    left, right = line.split(":", 1)
+    name_with_type = left.strip()
+    description = right.strip()
+    type_name = ""
+
+    match = re.fullmatch(
+        r"(?P<name>\*{0,2}[A-Za-z_][\w.]*)\s*"
+        r"(?:\((?P<type_name>[^)]*)\))?\s*"
+        r"(?:=\s*[^:]+)?",
+        name_with_type,
+    )
+    if match:
+        name = match.group("name").strip()
+        type_name = (match.group("type_name") or "").strip()
+    else:
+        name = name_with_type
+        if "(" in name:
+            name = name.split("(", 1)[0].strip()
+        elif "=" in name:
+            name = name.split("=", 1)[0].strip()
+
+    return name, type_name, description
 
 
 def _normalize_block(lines: list[str]) -> str:
