@@ -301,6 +301,7 @@ def build_class_doc(item: DocumentableObject) -> ClassDoc:
         qualname=item.qualname or item.public_name,
         defining_module=item.defining_module,
         internal_use=check_lazydoc(parsed.description),
+        ignore_init=parsed.ignore_init,
         kind=item.kind,
         description=parsed.description,
         examples=parsed.examples,
