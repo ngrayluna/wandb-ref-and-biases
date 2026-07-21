@@ -21,6 +21,7 @@ def parse_docstring(docstring: str | None) -> ParsedDocstring:
 
     cleaned = inspect.cleandoc(docstring)
     lines = cleaned.splitlines()
+    ignore_init = False
 
     description_lines: list[str] = []
     args_lines: list[str] = []
@@ -32,7 +33,13 @@ def parse_docstring(docstring: str | None) -> ParsedDocstring:
     current_section = "description"
 
     for line in lines:
+        line, found_ignore_init = _strip_ignore_init_directive(line)
+        if found_ignore_init:
+            ignore_init = True
+
         stripped = line.strip()
+        if found_ignore_init and not stripped:
+            continue
 
         if stripped in {"Args:", "Arguments:", "Parameters:"}:
             current_section = "arguments"
@@ -74,6 +81,7 @@ def parse_docstring(docstring: str | None) -> ParsedDocstring:
         returns=parse_return_block(returns_lines),
         examples=_normalize_block(examples_lines),
         raises=parse_raises_block(raises_lines),
+        ignore_init=ignore_init,
     )
 
 
@@ -268,6 +276,18 @@ def parse_return_block(lines: list[str]) -> list[ReturnDoc]:
 def check_lazydoc(description: str) -> bool:
     """Return True if the description contains a lazydoc directive."""
     return "lazydoc" in description
+
+
+def _strip_ignore_init_directive(line: str) -> tuple[str, bool]:
+    """Remove the ignore-init directive before docstring text is rendered.
+
+    The parser treats unknown lines as ordinary section text, so a directive
+    left in place can leak into descriptions, examples, or the previous
+    argument's description. Return whether the directive was found so callers
+    can keep it as structured metadata instead.
+    """
+    stripped = re.sub(r"<!--\s*lazydoc-ignore-init(?::[^>]*)?\s*-->", "", line)
+    return stripped.rstrip(), stripped != line
 
 
 # Args need stricter field detection than Returns/Raises: prose inside an arg

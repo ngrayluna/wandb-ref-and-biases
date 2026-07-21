@@ -25,6 +25,8 @@ def build_arguments_section(arguments: list[dict]) -> str:
     if not arguments:
         return ""       
     formatted_arguments = "".join(format_argument_row(arg) for arg in arguments if not internal_use_only(arg))
+    if not formatted_arguments:
+        return ""
     return f"## Args\n\n{formatted_arguments}"
 
 def build_attributes_section(attributes: list[dict]) -> str:
@@ -42,6 +44,8 @@ def build_method_arguments_section(arguments: list[dict]) -> str:
     if not arguments:
         return ""
     formatted_arguments = "".join(format_argument_row(arg) for arg in arguments if not internal_use_only(arg))
+    if not formatted_arguments:
+        return ""
     return f"##### Arguments\n\n{formatted_arguments}"
 
 def build_returns_section(returns: list[dict]) -> str:
@@ -248,14 +252,15 @@ def internal_use_only(doc_entry: dict) -> bool:
 
 def generate_class_mdx_content(doc_entry: dict, release_tag: Optional[str] = None) -> str:
     """Generate MDX content for a class object using the class template."""
+    ignore_init = doc_entry.get("ignore_init", False)
     return CLASS_TEMPLATE.format(
         name=doc_entry.get("public_name", ""),
         kind=doc_entry.get("kind", ""),
         namespace=doc_entry.get("defining_module", ""),
         class_title=format_class_page_title(doc_entry.get("public_name", "")),
         description=build_description_section(doc_entry.get("description", "")),
-        signature=build_signature_block(doc_entry.get("signature", ""),),
-        arguments_section=build_arguments_section(doc_entry.get("arguments", []),),
+        signature="" if ignore_init else build_signature_block(doc_entry.get("signature", ""),),
+        arguments_section="" if ignore_init else build_arguments_section(doc_entry.get("arguments", []),),
         returns_section=build_returns_section(doc_entry.get("returns", "")),
         attributes_section=build_attributes_section(doc_entry.get("attributes", [])),
         properties_section=build_properties_section(doc_entry.get("properties", [])),

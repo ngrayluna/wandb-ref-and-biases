@@ -105,6 +105,7 @@ class ClassDoc:
     qualname: str = ""
     defining_module: str | None = None
     internal_use: bool = False
+    ignore_init: bool = False
     kind: str = ""
     description: str = ""
     examples: str = ""
@@ -138,6 +139,7 @@ class ParsedDocstring:
 
     description: str = ""
     examples: str = ""
+    ignore_init: bool = False
     arguments: list[ArgumentDoc] = field(default_factory=list)
     attributes: list[ClassAttributeDoc] = field(default_factory=list)
     returns: list[ReturnDoc] = field(default_factory=list)
