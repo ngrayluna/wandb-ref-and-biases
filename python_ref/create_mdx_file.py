@@ -18,7 +18,7 @@ def build_description_section(description: str) -> str:
     """Build the Description markdown section, or empty string if no description."""
     if not description:
         return ""
-    return f"## Description\n\n{description}\n\n"
+    return f"\n\n{description}\n\n"
 
 def build_arguments_section(arguments: list[dict]) -> str:
     """Build the Arguments markdown section, or empty string if no arguments."""
@@ -257,7 +257,7 @@ def generate_class_mdx_content(doc_entry: dict, release_tag: Optional[str] = Non
         name=doc_entry.get("public_name", ""),
         kind=doc_entry.get("kind", ""),
         namespace=doc_entry.get("defining_module", ""),
-        class_title=format_class_page_title(doc_entry.get("public_name", "")),
+        class_title=format_class_page_title(doc_entry.get("filename", "")),
         description=build_description_section(doc_entry.get("description", "")),
         signature="" if ignore_init else build_signature_block(doc_entry.get("signature", ""),),
         arguments_section="" if ignore_init else build_arguments_section(doc_entry.get("arguments", []),),
@@ -280,7 +280,7 @@ def generate_function_mdx_content(doc_entry: dict, release_tag: Optional[str] = 
         name=doc_entry.get("name", ""),
         kind=doc_entry.get("kind", ""),
         namespace=doc_entry.get("defining_module", ""),
-        function_title=format_function_page_title(doc_entry.get('name', '')),
+        function_title=format_function_page_title(doc_entry.get('filename', '')),
         description=build_description_section(doc_entry.get("description", "")),
         signature=build_signature_block(doc_entry.get("signature", "")),
         arguments_section=build_arguments_section(doc_entry.get("arguments", [])),

@@ -82,10 +82,13 @@ def main(args: argparse.Namespace) -> None:
 
             print(f"Documenting {export.config_namespace}.{export.public_name}...")
 
+            output_filename = f"{export.config_namespace}.{export.public_name}"
             docs_map, missing = document_export(export)
+            for doc_entry in docs_map.values():
+                doc_entry["filename"] = output_filename
 
             # Define output path as {namespace}.{public_name}.json to ensure uniqueness
-            output_path = output_dir / f"{export.config_namespace}.{export.public_name}.json"
+            output_path = output_dir / f"{output_filename}.json"
             output_path.write_text(
                 json.dumps(docs_map, indent=2, ensure_ascii=False) + "\n",
                 encoding="utf-8",
