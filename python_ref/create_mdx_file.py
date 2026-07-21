@@ -27,6 +27,16 @@ def build_arguments_section(arguments: list[dict]) -> str:
     formatted_arguments = "".join(format_argument_row(arg) for arg in arguments if not internal_use_only(arg))
     return f"## Args\n\n{formatted_arguments}"
 
+def build_attributes_section(attributes: list[dict]) -> str:
+    """Build the Attributes markdown section, or empty string if no attributes."""
+    if not attributes:
+        return ""
+
+    formatted_attributes = "".join(format_attribute_row(attr) for attr in attributes if not internal_use_only(attr))
+    if not formatted_attributes:
+        return ""
+    return f"## Attributes\n\n{formatted_attributes}"
+
 def build_method_arguments_section(arguments: list[dict]) -> str:
     """Build the Arguments markdown section, or empty string if no arguments."""
     if not arguments:
@@ -164,6 +174,18 @@ def format_argument_row(argument: dict) -> str:
     return f"- `{name}`: {indent_markdown_list_item_text(description)}\n"
 
 
+def format_attribute_row(attribute: dict) -> str:
+    """Format a single attribute row for the Attributes section."""
+    name = attribute.get("name", "")
+    type_name = attribute.get("type_name", "")
+    description = attribute.get("description", "")
+    type_label = f" (`{type_name}`)" if type_name else ""
+    if not description:
+        return f"- `{name}`{type_label}: \n"
+
+    return f"- `{name}`{type_label}: {indent_markdown_list_item_text(description)}\n"
+
+
 def indent_markdown_list_item_text(text: str) -> str:
     """Indent multiline text so it stays inside its parent markdown list item."""
     lines = text.splitlines()
@@ -235,6 +257,7 @@ def generate_class_mdx_content(doc_entry: dict, release_tag: Optional[str] = Non
         signature=build_signature_block(doc_entry.get("signature", ""),),
         arguments_section=build_arguments_section(doc_entry.get("arguments", []),),
         returns_section=build_returns_section(doc_entry.get("returns", "")),
+        attributes_section=build_attributes_section(doc_entry.get("attributes", [])),
         properties_section=build_properties_section(doc_entry.get("properties", [])),
         methods_section=build_methods_section(doc_entry.get("methods", [])),
         examples_section=build_examples_section(doc_entry.get("examples", "")),

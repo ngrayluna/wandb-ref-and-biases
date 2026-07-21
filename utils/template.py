@@ -45,6 +45,8 @@ namespace: {namespace}
 
 {arguments_section}
 
+{attributes_section}
+
 {examples_section}
 
 {properties_section}

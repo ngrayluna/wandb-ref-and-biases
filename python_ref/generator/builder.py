@@ -15,9 +15,9 @@ from generator.inspection import (
 )
 from generator.models import (
     ArgumentDoc,
-    AttributeDoc,
     ClassDoc,
     DocumentableObject,
+    ExportedObjectDoc,
     ExportedName,
     FunctionDoc,
     MethodDoc,
@@ -309,17 +309,18 @@ def build_class_doc(item: DocumentableObject) -> ClassDoc:
         import_statement=item.import_statement,
         signature=item.signature,
         arguments=build_argument_docs(item.obj, arguments),
+        attributes=parsed.attributes,
         properties=collect_class_properties(item.obj),
         methods=collect_class_methods(item.obj),
         raises=parsed.raises,
     )
 
 
-def build_attribute_doc(item: DocumentableObject) -> AttributeDoc:
-    """Build a docs-ready record for a public attribute-like export."""
+def build_exported_object_doc(item: DocumentableObject) -> ExportedObjectDoc:
+    """Build docs metadata for a public exported object that is not a class or callable."""
     parsed = parse_docstring(item.docstring)
 
-    return AttributeDoc(
+    return ExportedObjectDoc(
         name=item.public_name,
         description=parsed.description,
         kind=item.kind,

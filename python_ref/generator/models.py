@@ -52,6 +52,16 @@ class PropertyDoc:
 
 
 @dataclass(frozen=True, slots=True)
+class ClassAttributeDoc:
+    """Documentation for an attribute listed in a class docstring."""
+
+    name: str
+    type_name: str = ""
+    description: str = ""
+    internal_use: bool = False
+
+
+@dataclass(frozen=True, slots=True)
 class MethodDoc:
     """Documentation for a public method."""
 
@@ -103,14 +113,15 @@ class ClassDoc:
     import_statement: str = ""
     signature: str | None = None
     arguments: list[ArgumentDoc] = field(default_factory=list)
+    attributes: list[ClassAttributeDoc] = field(default_factory=list)
     properties: list[PropertyDoc] = field(default_factory=list)
     methods: list[MethodDoc] = field(default_factory=list)
     raises: list[RaisesDoc] = field(default_factory=list)
 
 
 @dataclass(frozen=True, slots=True)
-class AttributeDoc:
-    """Documentation for a public attribute-like export."""
+class ExportedObjectDoc:
+    """Documentation for a public exported object that is not a class or callable."""
 
     name: str
     kind: str = ""
@@ -128,6 +139,7 @@ class ParsedDocstring:
     description: str = ""
     examples: str = ""
     arguments: list[ArgumentDoc] = field(default_factory=list)
+    attributes: list[ClassAttributeDoc] = field(default_factory=list)
     returns: list[ReturnDoc] = field(default_factory=list)
     raises: list[RaisesDoc] = field(default_factory=list)
 
