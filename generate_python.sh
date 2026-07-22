@@ -13,6 +13,29 @@ JSON_DOC_ENTRIES_DIR="./artifacts/python_docs_json"
 TMP_MDX_OUTPUT_DIR="./artifacts/python_mdx_output"
 MDX_OUTPUT_DIR="./generated/python"
 
+clear_directory() {
+  local dir="$1"
+
+  if [[ -z "$dir" || "$dir" == "/" ]]; then
+    echo "Refusing to clear unsafe directory: '$dir'" >&2
+    exit 1
+  fi
+
+  mkdir -p "$dir"
+  find "$dir" -mindepth 1 -maxdepth 1 -exec rm -rf {} +
+}
+
+replace_directory() {
+  local dir="$1"
+
+  if [[ -z "$dir" || "$dir" == "/" ]]; then
+    echo "Refusing to replace unsafe directory: '$dir'" >&2
+    exit 1
+  fi
+
+  rm -rf "$dir"
+  mkdir -p "$dir"
+}
 
 usage() {
   cat <<EOF
@@ -57,32 +80,10 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-# Check directories exist, if they do remove contents, if they don't create them
-if [ -d "$JSON_NAMESPACES_DIR" ]; then
-    rm -rf "$JSON_NAMESPACES_DIR"/*
-else
-    mkdir -p "$JSON_NAMESPACES_DIR"
-fi
-
-if [ -d "$JSON_DOC_ENTRIES_DIR" ]; then
-    rm -rf "$JSON_DOC_ENTRIES_DIR"/*
-else
-    mkdir -p "$JSON_DOC_ENTRIES_DIR"
-fi
-
-if [ -d "$TMP_MDX_OUTPUT_DIR" ]; then
-    rm -rf "$TMP_MDX_OUTPUT_DIR"/*
-else
-    mkdir -p "$TMP_MDX_OUTPUT_DIR"
-fi
-
-if [ -d "$MDX_OUTPUT_DIR" ]; then
-    rm -rf "$MDX_OUTPUT_DIR"/*
-else
-    mkdir -p "$MDX_OUTPUT_DIR"
-fi
-
-
+clear_directory "$JSON_NAMESPACES_DIR"
+clear_directory "$JSON_DOC_ENTRIES_DIR"
+clear_directory "$TMP_MDX_OUTPUT_DIR"
+clear_directory "$MDX_OUTPUT_DIR"
 
 # Clone/checkout the wandb repo and export PYTHONPATH (sets REPO_ROOT).
 prepare_repo "$RELEASE_TAG" "$REPO_DIR"
@@ -98,6 +99,12 @@ python ./python_ref/sort_files.py --source-directory "$TMP_MDX_OUTPUT_DIR" --out
 
 python ./python_ref/rename_files.py --source-directory "$MDX_OUTPUT_DIR/"
 
+# Copy static mdx files to the generated directory
+cp -R python_ref/static_mdx/. "$MDX_OUTPUT_DIR"/
+find "$MDX_OUTPUT_DIR" -name ".DS_Store" -delete
+
 echo "Copying generated docs to $DOCS_REPO_DIR/models/ref/python/..."
 
-cp -r $MDX_OUTPUT_DIR/* $DOCS_REPO_DIR/models/ref/python/
+DEST="$DOCS_REPO_DIR/models/ref/python"
+replace_directory "$DEST"
+cp -R "$MDX_OUTPUT_DIR"/. "$DEST"/
