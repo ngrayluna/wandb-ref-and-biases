@@ -146,6 +146,11 @@ def build_properties_page(properties: list[dict]) -> str:
     return f"\n\n{formatted_properties}"
 
 
+def format_output_slug(name: str) -> str:
+    """Format an object name the same way generated MDX filenames are normalized."""
+    return name.lower()
+
+
 
 def format_raises_row(raise_: dict) -> str:
     """Format a single exception row for the Raises section."""
@@ -270,7 +275,9 @@ def internal_use_only(doc_entry: dict) -> bool:
 def generate_class_mdx_content(doc_entry: dict, release_tag: Optional[str] = None) -> List[str]:
     """Generate MDX content for a class object using the class template."""
     ignore_init = doc_entry.get("ignore_init", False)
-    return [CLASS_TEMPLATE.format(
+    public_name = doc_entry.get("public_name", "")
+    parent_slug = format_output_slug(public_name)
+    class_main = CLASS_TEMPLATE.format(
         name=doc_entry.get("public_name", ""),
         kind=doc_entry.get("kind", ""),
         namespace=doc_entry.get("defining_module", ""),
@@ -288,15 +295,21 @@ def generate_class_mdx_content(doc_entry: dict, release_tag: Optional[str] = Non
                 source_file=doc_entry.get("source_file", ""),
                 line_number=doc_entry.get("line_number", 0),
                 release_tag=release_tag)
-    ),
+    )
 
-    CLASS_PROPERTIES_SECTION_TEMPLATE.format(
-        name=doc_entry.get("public_name", ""),
+    properties_section = build_properties_page(doc_entry.get("properties", []))
+    if not properties_section:
+        return [class_main, ""]
+
+    class_properties = CLASS_PROPERTIES_SECTION_TEMPLATE.format(
+        name=public_name,
+        parent_slug=parent_slug,
         kind=doc_entry.get("kind", ""),
         namespace=doc_entry.get("defining_module", ""),
         class_title=format_class_page_title(doc_entry.get("filename", "")),
-        properties_section=build_properties_page(doc_entry.get("properties", [])))
-    ]
+        properties_section=properties_section)
+
+    return [class_main, class_properties]
 
 def generate_function_mdx_content(doc_entry: dict, release_tag: Optional[str] = None) -> str:
     """Generate MDX content for a function object using the function template."""
@@ -344,9 +357,10 @@ def main(args):
                 with open(class_main_filename, 'w', encoding='utf-8') as f:
                     f.write(class_main)
 
-                class_properties_filename = f"{output_dir}/{item_key}-properties.{doc_entry.get('defining_module', '').replace('.', '_')}.mdx"
                 if class_properties:
-                    with open(f"{output_dir}/{item_key}-properties.{doc_entry.get('defining_module', '').replace('.', '_')}.mdx", 'w', encoding='utf-8') as f:
+                    class_properties_filename = f"{output_dir}/{item_key}-properties.{doc_entry.get('defining_module', '').replace('.', '_')}.mdx"
+                    print(f"Creating MDX content for {item_key} properties at {class_properties_filename}")
+                    with open(class_properties_filename, 'w', encoding='utf-8') as f:
                         f.write(class_properties)
 
         elif doc_entry.get("kind") == "function":
