@@ -7,11 +7,11 @@ import argparse
 import glob
 import json
 from pathlib import Path
-from typing import Optional
+from typing import List, Optional
 import sys
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from utils.template import CLASS_TEMPLATE, FUNCTION_TEMPLATE
+from utils.template import CLASS_PROPERTIES_SECTION_TEMPLATE, CLASS_TEMPLATE, FUNCTION_TEMPLATE
 from utils.markdown import format_github_button, github_import_statement
 
 def build_description_section(description: str) -> str:
@@ -129,6 +129,23 @@ def build_properties_section(properties: list[dict]) -> str:
     if not formatted_properties:
         return ""
     return f"## Properties\n\n{formatted_properties}"
+
+
+def build_properties_page(properties: list[dict]) -> str:
+    """Build the Properties mardown page for a class, or empty string if no properties.
+
+    Properties marked for internal use only (identified by 'lazydoc' in description) are
+    filtered out and not included in the output.
+    """
+    if not properties:
+        return ""
+
+    formatted_properties = "".join(format_property_row(prop) for prop in properties if not internal_use_only(prop))
+    if not formatted_properties:
+        return ""
+    return f"\n\n{formatted_properties}"
+
+
 
 def format_raises_row(raise_: dict) -> str:
     """Format a single exception row for the Raises section."""
@@ -250,10 +267,10 @@ def internal_use_only(doc_entry: dict) -> bool:
     return "lazydoc" in doc_entry.get("description", "") or doc_entry.get("name", "").startswith("_") or doc_entry.get("qualname", "").startswith("_")
 
 
-def generate_class_mdx_content(doc_entry: dict, release_tag: Optional[str] = None) -> str:
+def generate_class_mdx_content(doc_entry: dict, release_tag: Optional[str] = None) -> List[str]:
     """Generate MDX content for a class object using the class template."""
     ignore_init = doc_entry.get("ignore_init", False)
-    return CLASS_TEMPLATE.format(
+    return [CLASS_TEMPLATE.format(
         name=doc_entry.get("public_name", ""),
         kind=doc_entry.get("kind", ""),
         namespace=doc_entry.get("defining_module", ""),
@@ -271,8 +288,15 @@ def generate_class_mdx_content(doc_entry: dict, release_tag: Optional[str] = Non
                 source_file=doc_entry.get("source_file", ""),
                 line_number=doc_entry.get("line_number", 0),
                 release_tag=release_tag)
-    )
+    ),
 
+    CLASS_PROPERTIES_SECTION_TEMPLATE.format(
+        name=doc_entry.get("public_name", ""),
+        kind=doc_entry.get("kind", ""),
+        namespace=doc_entry.get("defining_module", ""),
+        class_title=format_class_page_title(doc_entry.get("filename", "")),
+        properties_section=build_properties_page(doc_entry.get("properties", [])))
+    ]
 
 def generate_function_mdx_content(doc_entry: dict, release_tag: Optional[str] = None) -> str:
     """Generate MDX content for a function object using the function template."""
@@ -299,6 +323,8 @@ def main(args):
 
     print("Generating MDX files from JSON metadata...")
 
+    output_dir = args.output_dir
+
     for filename in glob.glob(os.path.join(args.source_info, '*.json')):
         with open(filename, 'r', encoding='utf-8') as file:
             json_file = json.load(file)
@@ -310,16 +336,29 @@ def main(args):
 
         doc_entry = json_file[item_key]
         if doc_entry.get("kind") == "class":
-            template = generate_class_mdx_content(doc_entry, release_tag=args.release_tag)
+            class_main, class_properties = generate_class_mdx_content(doc_entry, release_tag=args.release_tag)
+
+            if class_main:
+                class_main_filename = f"{output_dir}/{item_key}.{doc_entry.get('defining_module', '').replace('.', '_')}.mdx"
+                print(f"Creating MDX content for {item_key} at {class_main_filename}")
+                with open(class_main_filename, 'w', encoding='utf-8') as f:
+                    f.write(class_main)
+
+                class_properties_filename = f"{output_dir}/{item_key}-properties.{doc_entry.get('defining_module', '').replace('.', '_')}.mdx"
+                if class_properties:
+                    with open(f"{output_dir}/{item_key}-properties.{doc_entry.get('defining_module', '').replace('.', '_')}.mdx", 'w', encoding='utf-8') as f:
+                        f.write(class_properties)
+
         elif doc_entry.get("kind") == "function":
             template = generate_function_mdx_content(doc_entry, release_tag=args.release_tag)
+            generated_filename = f"{output_dir}/{item_key}.{doc_entry.get('defining_module', '').replace('.', '_')}.mdx"
+            print(f"Creating MDX content for {item_key} at {generated_filename}")
+            with open(generated_filename, 'w', encoding='utf-8') as f:
+                f.write(template)
         else:
             raise ValueError(f"Unsupported item kind: {doc_entry.get('kind')}")
 
-        print(f"Created MDX content for {item_key}")
-        output_dir = args.output_dir
-        with open(f"{output_dir}/{item_key}.{doc_entry.get('defining_module', '').replace('.', '_')}.mdx", 'w', encoding='utf-8') as f:
-            f.write(template)
+        # print(f"Created MDX content for {item_key}")
 
     print("MDX generation complete.\n") 
 
