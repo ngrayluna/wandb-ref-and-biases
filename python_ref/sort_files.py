@@ -45,7 +45,7 @@ def build_destination_path(output: str, category: str, filename: str, metadata: 
     """Build the output path for a generated MDX file."""
     basename = os.path.basename(filename)
 
-    if metadata.get("page_kind") == "class-properties":
+    if metadata.get("page_kind") in {"class-properties", "class-methods"}:
         parent_slug = metadata.get("parent_slug", "")
         if parent_slug:
             return os.path.join(output, category, parent_slug, basename)
