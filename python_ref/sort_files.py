@@ -18,9 +18,14 @@ def create_directories(root_directory: str) -> None:
         os.makedirs(os.path.join(root_directory, category), exist_ok=True)
 
 def sort_logic(kind: str, namespace: str) -> str:
-    """Determine category for an MDX file based on its metadata."""
+    """Determine category for an MDX file based on its metadata.
+    
+    TODO: Sorting logic could be improved. E.g. functions sorting looks for sdk
+    global functions. This may not cover all cases and could be refined further.
+    """
 
-    if kind == "function" and "wandb.sdk" in namespace:
+    if kind == "function" and (
+    namespace.startswith("wandb.sdk.") or namespace == "wandb.wandb_agent"):
         return "functions"
     if "wandb.sdk.data_types" in namespace:
         return "data-types"
