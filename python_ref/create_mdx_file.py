@@ -370,7 +370,8 @@ def extract_parameter_types(signature: str) -> dict[str, str]:
     if not signature:
         return {}
 
-    source = f"def _doc_stub{signature}:\n    pass\n"
+    ast_signature = sanitize_signature_for_ast(signature)
+    source = f"def _doc_stub{ast_signature}:\n    pass\n"
     try:
         module = ast.parse(source)
     except SyntaxError:
@@ -395,6 +396,15 @@ def extract_parameter_types(signature: str) -> dict[str, str]:
         for parameter in parameters
         if parameter.arg not in {"self", "cls"} and parameter.annotation is not None
     }
+
+
+def sanitize_signature_for_ast(signature: str) -> str:
+    """Replace inspect-only default reprs with valid Python placeholders.
+    
+    This handles cases like:
+        'AlertSeverity' = <AlertSeverity.INFO: 'INFO'>
+    """
+    return re.sub(r"=\s*<[^>\n]+>", "= None", signature)
 
 
 def format_annotation_node(annotation: ast.expr, source: str) -> str:
