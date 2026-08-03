@@ -6,8 +6,9 @@ import re
 import argparse
 import glob
 import json
+from dataclasses import dataclass
 from pathlib import Path
-from typing import Iterable, NamedTuple, Optional
+from typing import Iterable, Optional
 import sys
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
@@ -23,7 +24,8 @@ PAGE_SECTION_HEADING = "##"
 METHOD_SECTION_HEADING = "#####"
 
 
-class ClassMdxPages(NamedTuple):
+@dataclass(frozen=True)
+class ClassMdxPages:
     """Generated MDX pages for a class."""
 
     main: str
@@ -130,11 +132,27 @@ def build_returns_section(returns: list[dict]) -> str:
 
 def build_method_returns_section(returns: list[dict]) -> str:
     """Build the method Returns markdown section, or empty string if no return value."""
+    if not has_explicit_method_return_docs(returns):
+        return ""
+
     return build_markdown_section(
         "Returns",
         format_returns_body(returns),
         METHOD_SECTION_HEADING,
     )
+
+
+def has_explicit_method_return_docs(returns: list[dict]) -> bool:
+    """Return whether method returns came from explicit docstring content."""
+    if not returns:
+        return False
+
+    return not is_annotation_fallback_return(returns[0])
+
+
+def is_annotation_fallback_return(return_doc: dict) -> bool:
+    """Return whether a return doc matches the annotation fallback shape."""
+    return return_doc.get("type_name") == "return"
 
 
 def format_returns_body(returns: list[dict]) -> str:
@@ -382,7 +400,8 @@ def internal_use_only(doc_entry: dict) -> bool:
             qualname starts with an underscore, indicating internal use only.
     """
     return (
-        "lazydoc" in doc_entry.get("description", "")
+        doc_entry.get("internal_use", False)
+        or "lazydoc" in doc_entry.get("description", "")
         or doc_entry.get("name", "").startswith("_")
         or doc_entry.get("qualname", "").startswith("_")
     )
@@ -412,7 +431,6 @@ def generate_class_mdx_content(
                 doc_entry.get("arguments", [])
             )
         ),
-        returns_section=build_returns_section(doc_entry.get("returns", "")),
         attributes_section=build_attributes_section(doc_entry.get("attributes", [])),
         examples_section=build_examples_section(doc_entry.get("examples", "")),
         import_statements=github_import_statement(),
@@ -447,7 +465,11 @@ def generate_class_mdx_content(
             methods_section=methods_section,
         )
 
-    return ClassMdxPages(class_main, class_properties, class_methods)
+    return ClassMdxPages(
+        main=class_main,
+        properties=class_properties,
+        methods=class_methods,
+    )
 
 def generate_function_mdx_content(doc_entry: dict, release_tag: Optional[str] = None) -> str:
     """Generate MDX content for a function object using the function template."""

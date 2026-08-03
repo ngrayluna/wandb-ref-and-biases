@@ -83,7 +83,7 @@ namespace: {namespace}
 
 """
 
-RESPONSE_FIELD_TEMPLATE = """<ResponseField name="{name}" type="{type}" required={required}>
+RESPONSE_FIELD_TEMPLATE = """<ResponseField name="{name}" type="{type}">
 {description}
 </ResponseField>
 """
