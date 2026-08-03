@@ -1,15 +1,16 @@
 """
 Generate .mdx files for Python SDK.
 """
-import os
-import re
 import argparse
+import ast
 import glob
 import json
+import os
+import re
+import sys
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Iterable, Optional
-import sys
+from typing import Callable, Iterable, Optional
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from utils.template import (
@@ -63,42 +64,54 @@ def build_description_section(description: str) -> str:
 
 def build_function_arguments_section(arguments: list[dict]) -> str:
     """Build the Args section for a standalone function page."""
-    return build_argument_list_section(
+    return build_argument_section(
         heading="Args",
         arguments=arguments,
         heading_marker=PAGE_SECTION_HEADING,
+        argument_formatter=format_argument_bullet,
     )
 
 
 def build_class_constructor_arguments_section(arguments: list[dict]) -> str:
     """Build the Args section for constructor args on the main class page."""
-    return build_argument_list_section(
+    return build_argument_section(
         heading="Args",
         arguments=arguments,
         heading_marker=PAGE_SECTION_HEADING,
+        argument_formatter=format_argument_bullet,
     )
 
 
-def build_class_method_arguments_section(arguments: list[dict]) -> str:
-    """Build the Arguments subsection for a class method entry."""
-    return build_argument_list_section(
+def format_method_arguments_block(arguments: list[dict], signature: str) -> str:
+    """Format the Arguments block for a method entry."""
+    parameter_types = extract_parameter_types(signature)
+
+    def format_method_argument(argument: dict) -> str:
+        return format_argument_response_field(
+            argument,
+            type_name=parameter_types.get(argument.get("name", ""), ""),
+        )
+
+    return build_argument_section(
         heading="Arguments",
         arguments=arguments,
         heading_marker=METHOD_SECTION_HEADING,
+        argument_formatter=format_method_argument,
     )
 
 
-def build_argument_list_section(
+def build_argument_section(
     heading: str,
     arguments: list[dict],
     heading_marker: str,
+    argument_formatter: Callable[[dict], str],
 ) -> str:
-    """Build an argument list section with the requested heading level."""
+    """Build an argument section with the requested item formatter."""
     if not arguments:
         return ""
 
     formatted_arguments = "".join(
-        format_argument_row(arg)
+        argument_formatter(arg)
         for arg in arguments
         if not internal_use_only(arg)
     )
@@ -297,8 +310,12 @@ def format_method_heading(method: dict) -> str:
 def format_method_entry(method: dict) -> str:
     """Format a single method entry for the Methods page."""
     description = method.get("description", "")
-    signature = build_signature_block(method.get("signature", ""))
-    arguments = build_class_method_arguments_section(method.get("arguments", []))
+    method_signature = method.get("signature", "")
+    signature = build_signature_block(method_signature)
+    arguments = format_method_arguments_block(
+        method.get("arguments", []),
+        method_signature,
+    )
     returns = build_method_returns_section(method.get("returns", []))
     raises = build_method_raises_section(method.get("raises", []))
     examples = build_method_examples_section(method.get("examples", ""))
@@ -320,14 +337,72 @@ def format_property_row(property_doc: dict) -> str:
     description = property_doc.get("description", "")
     return f"### <kbd>property</kbd> {name}\n\n{description}\n\n"
 
-def format_argument_row(argument: dict) -> str:
-    """Format a single argument row for the Arguments section."""
+def format_argument_bullet(argument: dict) -> str:
+    """Format a single argument as a markdown bullet."""
     name = argument.get("name", "")
     description = argument.get("description", "")
     if not description:
         return f"- `{name}`: \n"
 
     return f"- `{name}`: {indent_markdown_list_item_text(description)}\n"
+
+
+def format_argument_response_field(argument: dict, type_name: str = "") -> str:
+    """Format a single argument as a Mintlify ResponseField component."""
+    name = escape_mdx_attribute(argument.get("name", ""))
+    type_value = escape_mdx_attribute(type_name)
+    description = argument.get("description", "").strip("\n")
+
+    return (
+        f'<ResponseField name="{name}" type="{type_value}">\n'
+        f"{description}\n"
+        "</ResponseField>\n\n"
+    )
+
+
+def escape_mdx_attribute(value: str) -> str:
+    """Escape a string for use inside a double-quoted MDX attribute."""
+    return value.replace("&", "&amp;").replace('"', "&quot;")
+
+
+def extract_parameter_types(signature: str) -> dict[str, str]:
+    """Extract parameter annotation strings from an inspect.Signature string."""
+    if not signature:
+        return {}
+
+    source = f"def _doc_stub{signature}:\n    pass\n"
+    try:
+        module = ast.parse(source)
+    except SyntaxError:
+        return {}
+
+    function = module.body[0]
+    if not isinstance(function, ast.FunctionDef):
+        return {}
+
+    parameters = [
+        *function.args.posonlyargs,
+        *function.args.args,
+        *function.args.kwonlyargs,
+    ]
+    if function.args.vararg:
+        parameters.append(function.args.vararg)
+    if function.args.kwarg:
+        parameters.append(function.args.kwarg)
+
+    return {
+        parameter.arg: format_annotation_node(parameter.annotation, source)
+        for parameter in parameters
+        if parameter.arg not in {"self", "cls"} and parameter.annotation is not None
+    }
+
+
+def format_annotation_node(annotation: ast.expr, source: str) -> str:
+    """Format an AST annotation node for display in generated MDX."""
+    if isinstance(annotation, ast.Constant) and isinstance(annotation.value, str):
+        return annotation.value
+
+    return ast.get_source_segment(source, annotation) or ""
 
 
 def format_attribute_row(attribute: dict) -> str:

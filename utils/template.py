@@ -83,13 +83,6 @@ namespace: {namespace}
 
 """
 
-RESPONSE_FIELD_TEMPLATE = """<ResponseField name="{name}" type="{type}">
-{description}
-</ResponseField>
-"""
-
-
-
 ## Template for individual Click commands (commands that do not have subcommands) and Click command groups (commands that have subcommands) are imported from cli_doc_template.py to avoid circular imports.
 
 CLI_COMMAND_TEMPLATE = """---
