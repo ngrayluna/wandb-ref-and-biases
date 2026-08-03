@@ -52,7 +52,7 @@ namespace: {namespace}
 """
 
 
-CLASS_PROPERTIES_SECTION_TEMPLATE = """---
+CLASS_PROPERTIES_PAGE_TEMPLATE = """---
 title: {name} properties
 sidebarTitle: Properties
 page_kind: class-properties
@@ -68,7 +68,7 @@ namespace: {namespace}
 """
 
 
-CLASS_METHODS_SECTION_TEMPLATE = """---
+CLASS_METHODS_PAGE_TEMPLATE = """---
 title: {name} methods
 sidebarTitle: Methods
 page_kind: class-methods
@@ -81,6 +81,11 @@ namespace: {namespace}
 
 {methods_section}
 
+"""
+
+RESPONSE_FIELD_TEMPLATE = """<ResponseField name="{name}" type="{type}" required={required}>
+{description}
+</ResponseField>
 """
 
 

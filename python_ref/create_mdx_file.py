@@ -7,17 +7,51 @@ import argparse
 import glob
 import json
 from pathlib import Path
-from typing import List, Optional
+from typing import Iterable, NamedTuple, Optional
 import sys
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from utils.template import (
-    CLASS_METHODS_SECTION_TEMPLATE,
-    CLASS_PROPERTIES_SECTION_TEMPLATE,
+    CLASS_METHODS_PAGE_TEMPLATE,
+    CLASS_PROPERTIES_PAGE_TEMPLATE,
     CLASS_TEMPLATE,
     FUNCTION_TEMPLATE,
 )
 from utils.markdown import format_github_button, github_import_statement
+
+PAGE_SECTION_HEADING = "##"
+METHOD_SECTION_HEADING = "#####"
+
+
+class ClassMdxPages(NamedTuple):
+    """Generated MDX pages for a class."""
+
+    main: str
+    properties: str
+    methods: str
+
+
+def build_markdown_section(
+    heading: str,
+    body: str,
+    heading_marker: str = PAGE_SECTION_HEADING,
+) -> str:
+    """Build a markdown section with a heading, or empty string if no body."""
+    body = body.strip("\n")
+    if not body.strip():
+        return ""
+
+    return f"{heading_marker} {heading}\n\n{body}"
+
+
+def join_markdown_blocks(blocks: Iterable[str]) -> str:
+    """Join non-empty markdown blocks with consistent spacing."""
+    return "\n\n".join(
+        block.strip("\n")
+        for block in blocks
+        if block and block.strip()
+    )
+
 
 def build_description_section(description: str) -> str:
     """Build the Description markdown section, or empty string if no description."""
@@ -25,37 +59,88 @@ def build_description_section(description: str) -> str:
         return ""
     return f"\n\n{description}\n\n"
 
-def build_arguments_section(arguments: list[dict]) -> str:
-    """Build the Arguments markdown section, or empty string if no arguments."""
+def build_function_arguments_section(arguments: list[dict]) -> str:
+    """Build the Args section for a standalone function page."""
+    return build_argument_list_section(
+        heading="Args",
+        arguments=arguments,
+        heading_marker=PAGE_SECTION_HEADING,
+    )
+
+
+def build_class_constructor_arguments_section(arguments: list[dict]) -> str:
+    """Build the Args section for constructor args on the main class page."""
+    return build_argument_list_section(
+        heading="Args",
+        arguments=arguments,
+        heading_marker=PAGE_SECTION_HEADING,
+    )
+
+
+def build_class_method_arguments_section(arguments: list[dict]) -> str:
+    """Build the Arguments subsection for a class method entry."""
+    return build_argument_list_section(
+        heading="Arguments",
+        arguments=arguments,
+        heading_marker=METHOD_SECTION_HEADING,
+    )
+
+
+def build_argument_list_section(
+    heading: str,
+    arguments: list[dict],
+    heading_marker: str,
+) -> str:
+    """Build an argument list section with the requested heading level."""
     if not arguments:
-        return ""       
-    formatted_arguments = "".join(format_argument_row(arg) for arg in arguments if not internal_use_only(arg))
+        return ""
+
+    formatted_arguments = "".join(
+        format_argument_row(arg)
+        for arg in arguments
+        if not internal_use_only(arg)
+    )
     if not formatted_arguments:
         return ""
-    return f"## Args\n\n{formatted_arguments}"
+
+    return build_markdown_section(
+        heading,
+        formatted_arguments,
+        heading_marker,
+    )
 
 def build_attributes_section(attributes: list[dict]) -> str:
     """Build the Attributes markdown section, or empty string if no attributes."""
     if not attributes:
         return ""
 
-    formatted_attributes = "".join(format_attribute_row(attr) for attr in attributes if not internal_use_only(attr))
+    formatted_attributes = "".join(
+        format_attribute_row(attr)
+        for attr in attributes
+        if not internal_use_only(attr)
+    )
     if not formatted_attributes:
         return ""
-    return f"## Attributes\n\n{formatted_attributes}"
-
-def build_method_arguments_section(arguments: list[dict]) -> str:
-    """Build the Arguments markdown section, or empty string if no arguments."""
-    if not arguments:
-        return ""
-    formatted_arguments = "".join(format_argument_row(arg) for arg in arguments if not internal_use_only(arg))
-    if not formatted_arguments:
-        return ""
-    return f"##### Arguments\n\n{formatted_arguments}"
+    return build_markdown_section("Attributes", formatted_attributes)
 
 def build_returns_section(returns: list[dict]) -> str:
     """Build the Returns markdown section, or empty string if no return value."""
-    # TODO:  Check logic for handling multiple return values. Currently, only the first return value is used.
+    return build_markdown_section("Returns", format_returns_body(returns))
+
+
+def build_method_returns_section(returns: list[dict]) -> str:
+    """Build the method Returns markdown section, or empty string if no return value."""
+    return build_markdown_section(
+        "Returns",
+        format_returns_body(returns),
+        METHOD_SECTION_HEADING,
+    )
+
+
+def format_returns_body(returns: list[dict]) -> str:
+    """Format return metadata shared by function and method docs."""
+    # TODO: Check logic for handling multiple return values. Currently, only
+    # the first return value is used.
     type_name = returns[0].get("type_name") if returns else ""
     description = returns[0].get("description") if returns else ""
 
@@ -67,36 +152,35 @@ def build_returns_section(returns: list[dict]) -> str:
     if type_name == "" or type_name == "return":
         section = f"{description}"
     else:
-        section = f"`{type_name}`: {description}\n"
+        section = f"`{type_name}`: {description}"
 
-    #formatted_returns = "".join(format_returns_row(ret) for ret in returns)
-    return f"## Returns\n\n{section}"
+    return section
 
 def build_raises_section(raises: list[dict]) -> str:
     """Build the Raises markdown section, or empty string if no exceptions raised."""
     if not raises:
         return ""
     formatted_raises = "".join(format_raises_row(raise_) for raise_ in raises)
-    return f"## Raises\n\n{formatted_raises}"
+    return build_markdown_section("Raises", formatted_raises)
 
 def build_method_raises_section(raises: list[dict]) -> str:
     """Build the Raises markdown section, or empty string if no exceptions raised."""
     if not raises:
         return ""
     formatted_raises = "".join(format_raises_row(raise_) for raise_ in raises)
-    return f"##### Raises\n\n{formatted_raises}"
+    return build_markdown_section("Raises", formatted_raises, METHOD_SECTION_HEADING)
 
 def build_examples_section(examples: str) -> str:
     """Build the Examples markdown section, or empty string if no examples."""
     if not examples:
         return ""
-    return f"## Examples\n\n{examples}"
+    return build_markdown_section("Examples", examples)
 
 def build_method_examples_section(examples: str) -> str:
     """Build the Examples markdown section, or empty string if no examples."""
     if not examples:
         return ""
-    return f"##### Examples\n\n{examples}\n\n"
+    return build_markdown_section("Examples", examples, METHOD_SECTION_HEADING)
 
 def build_signature_block(signature: str) -> str:
     """Build a markdown code block for the function signature."""
@@ -111,39 +195,24 @@ def build_signature_block(signature: str) -> str:
 
     return f"```python\n{formatted_signature}\n```"
 
-def build_methods_page(methods: list[dict]) -> str:
-    """Build the Methods markdown page for a class, or empty string if no methods."""
+def build_class_methods_body(methods: list[dict]) -> str:
+    """Build the body for a class methods page, or empty string if no methods."""
     if not methods:
         return ""
 
-    formatted_methods = "".join(
-        format_methods_row(method)
+    formatted_methods = join_markdown_blocks(
+        format_method_entry(method)
         for method in methods
-        if not internal_use_only(method) and validate_source_file(method.get("source_file", ""))
+        if is_public_method_doc(method)
     )
     if not formatted_methods:
         return ""
 
-    return f"\n\n{formatted_methods}"
+    return formatted_methods
 
 
-def build_properties_section(properties: list[dict]) -> str:
-    """Build the Properties mardown section for a class, or empty string if no properties.
-
-    Properties marked for internal use only (identified by 'lazydoc' in description) are
-    filtered out and not included in the output.
-    """
-    if not properties:
-        return ""
-
-    formatted_properties = "".join(format_property_row(prop) for prop in properties if not internal_use_only(prop))
-    if not formatted_properties:
-        return ""
-    return f"## Properties\n\n{formatted_properties}"
-
-
-def build_properties_page(properties: list[dict]) -> str:
-    """Build the Properties mardown page for a class, or empty string if no properties.
+def build_class_properties_body(properties: list[dict]) -> str:
+    """Build the body for a class properties page, or empty string if no properties.
 
     Properties marked for internal use only (identified by 'lazydoc' in description) are
     filtered out and not included in the output.
@@ -151,10 +220,14 @@ def build_properties_page(properties: list[dict]) -> str:
     if not properties:
         return ""
 
-    formatted_properties = "".join(format_property_row(prop) for prop in properties if not internal_use_only(prop))
+    formatted_properties = "".join(
+        format_property_row(prop)
+        for prop in properties
+        if not internal_use_only(prop)
+    )
     if not formatted_properties:
         return ""
-    return f"\n\n{formatted_properties}"
+    return formatted_properties.strip("\n")
 
 
 def format_output_slug(name: str) -> str:
@@ -177,23 +250,51 @@ def validate_source_file(source_file: str) -> bool:
     Returns:
         bool: True if the source file should be included; False otherwise.
     """
-    #TODO: Consider making this a configurable list of paths to ignore, or using a more robust method for determining internal vs. public modules.
-    filepaths_to_ignore = ["/data_types/base_types/", "/pydantic/", "/_pydantic/" , "/apis/attrs.py"]
+    # TODO: Consider making this a configurable list of paths to ignore, or
+    # using a more robust method for determining internal vs. public modules.
+    filepaths_to_ignore = [
+        "/data_types/base_types/",
+        "/pydantic/",
+        "/_pydantic/",
+        "/apis/attrs.py",
+    ]
     if any(ignore_path in source_file for ignore_path in filepaths_to_ignore):
         return False
 
     return True
 
 
-def format_methods_row(method: dict) -> str:
-    """Format a single method row for the Methods section."""
-    full_name = method.get("qualname", "")
+def is_public_method_doc(method: dict) -> bool:
+    """Return whether a method doc should appear on the class methods page."""
+    return not internal_use_only(method) and validate_source_file(
+        method.get("source_file", "")
+    )
+
+
+def format_method_heading(method: dict) -> str:
+    """Format a method entry heading."""
+    return f"### <kbd>method</kbd> {method.get('qualname', '')}()"
+
+
+def format_method_entry(method: dict) -> str:
+    """Format a single method entry for the Methods page."""
     description = method.get("description", "")
     signature = build_signature_block(method.get("signature", ""))
-    arguments = build_method_arguments_section(method.get("arguments", []))
+    arguments = build_class_method_arguments_section(method.get("arguments", []))
+    returns = build_method_returns_section(method.get("returns", []))
     raises = build_method_raises_section(method.get("raises", []))
     examples = build_method_examples_section(method.get("examples", ""))
-    return f"### <kbd>method</kbd> {full_name}()\n\n{signature}\n\n{description}\n\n{arguments}\n\n{raises}\n\n{examples}"
+    return join_markdown_blocks(
+        [
+            format_method_heading(method),
+            description,
+            signature,
+            arguments,
+            returns,
+            raises,
+            examples,
+        ]
+    )
 
 def format_property_row(property_doc: dict) -> str:
     """Format a single property row for the Properties section."""
@@ -280,10 +381,17 @@ def internal_use_only(doc_entry: dict) -> bool:
         bool: True if 'lazydoc' is found in the description, or if the name or
             qualname starts with an underscore, indicating internal use only.
     """
-    return "lazydoc" in doc_entry.get("description", "") or doc_entry.get("name", "").startswith("_") or doc_entry.get("qualname", "").startswith("_")
+    return (
+        "lazydoc" in doc_entry.get("description", "")
+        or doc_entry.get("name", "").startswith("_")
+        or doc_entry.get("qualname", "").startswith("_")
+    )
 
 
-def generate_class_mdx_content(doc_entry: dict, release_tag: Optional[str] = None) -> List[str]:
+def generate_class_mdx_content(
+    doc_entry: dict,
+    release_tag: Optional[str] = None,
+) -> ClassMdxPages:
     """Generate MDX content for a class object using the class template."""
     ignore_init = doc_entry.get("ignore_init", False)
     public_name = doc_entry.get("public_name", "")
@@ -294,42 +402,52 @@ def generate_class_mdx_content(doc_entry: dict, release_tag: Optional[str] = Non
         namespace=doc_entry.get("defining_module", ""),
         class_title=format_class_page_title(doc_entry.get("filename", "")),
         description=build_description_section(doc_entry.get("description", "")),
-        signature="" if ignore_init else build_signature_block(doc_entry.get("signature", ""),),
-        arguments_section="" if ignore_init else build_arguments_section(doc_entry.get("arguments", []),),
+        signature=(
+            "" if ignore_init else build_signature_block(doc_entry.get("signature", ""))
+        ),
+        arguments_section=(
+            ""
+            if ignore_init
+            else build_class_constructor_arguments_section(
+                doc_entry.get("arguments", [])
+            )
+        ),
         returns_section=build_returns_section(doc_entry.get("returns", "")),
         attributes_section=build_attributes_section(doc_entry.get("attributes", [])),
-        properties_section=build_properties_section(doc_entry.get("properties", [])),
         examples_section=build_examples_section(doc_entry.get("examples", "")),
         import_statements=github_import_statement(),
         github_path=format_github_button(
-                source_file=doc_entry.get("source_file", ""),
-                line_number=doc_entry.get("line_number", 0),
-                release_tag=release_tag)
+            source_file=doc_entry.get("source_file", ""),
+            line_number=doc_entry.get("line_number", 0),
+            release_tag=release_tag,
+        ),
     )
 
-    properties_section = build_properties_page(doc_entry.get("properties", []))
+    properties_section = build_class_properties_body(doc_entry.get("properties", []))
     class_properties = ""
     if properties_section:
-        class_properties = CLASS_PROPERTIES_SECTION_TEMPLATE.format(
+        class_properties = CLASS_PROPERTIES_PAGE_TEMPLATE.format(
             name=public_name,
             parent_slug=parent_slug,
             kind=doc_entry.get("kind", ""),
             namespace=doc_entry.get("defining_module", ""),
             class_title=format_class_page_title(doc_entry.get("filename", "")),
-            properties_section=properties_section)
+            properties_section=properties_section,
+        )
 
-    methods_section = build_methods_page(doc_entry.get("methods", []))
+    methods_section = build_class_methods_body(doc_entry.get("methods", []))
     class_methods = ""
     if methods_section:
-        class_methods = CLASS_METHODS_SECTION_TEMPLATE.format(
+        class_methods = CLASS_METHODS_PAGE_TEMPLATE.format(
             name=public_name,
             parent_slug=parent_slug,
             kind=doc_entry.get("kind", ""),
             namespace=doc_entry.get("defining_module", ""),
             class_title=format_class_page_title(doc_entry.get("filename", "")),
-            methods_section=methods_section)
+            methods_section=methods_section,
+        )
 
-    return [class_main, class_properties, class_methods]
+    return ClassMdxPages(class_main, class_properties, class_methods)
 
 def generate_function_mdx_content(doc_entry: dict, release_tag: Optional[str] = None) -> str:
     """Generate MDX content for a function object using the function template."""
@@ -340,7 +458,9 @@ def generate_function_mdx_content(doc_entry: dict, release_tag: Optional[str] = 
         function_title=format_function_page_title(doc_entry.get('filename', '')),
         description=build_description_section(doc_entry.get("description", "")),
         signature=build_signature_block(doc_entry.get("signature", "")),
-        arguments_section=build_arguments_section(doc_entry.get("arguments", [])),
+        arguments_section=build_function_arguments_section(
+            doc_entry.get("arguments", [])
+        ),
         returns_section=build_returns_section(doc_entry.get("returns", "")),
         raises_section=build_raises_section(doc_entry.get("raises", [])),
         examples_section=build_examples_section(doc_entry.get("examples", "")),
@@ -369,25 +489,25 @@ def main(args):
 
         doc_entry = json_file[item_key]
         if doc_entry.get("kind") == "class":
-            class_main, class_properties, class_methods = generate_class_mdx_content(doc_entry, release_tag=args.release_tag)
+            class_pages = generate_class_mdx_content(doc_entry, release_tag=args.release_tag)
 
-            if class_main:
+            if class_pages.main:
                 class_main_filename = f"{output_dir}/{item_key}.{doc_entry.get('defining_module', '').replace('.', '_')}.mdx"
                 print(f"Creating MDX content for {item_key} at {class_main_filename}")
                 with open(class_main_filename, 'w', encoding='utf-8') as f:
-                    f.write(class_main)
+                    f.write(class_pages.main)
 
-                if class_properties:
+                if class_pages.properties:
                     class_properties_filename = f"{output_dir}/{item_key}-properties.{doc_entry.get('defining_module', '').replace('.', '_')}.mdx"
                     print(f"Creating MDX content for {item_key} properties at {class_properties_filename}")
                     with open(class_properties_filename, 'w', encoding='utf-8') as f:
-                        f.write(class_properties)
+                        f.write(class_pages.properties)
 
-                if class_methods:
+                if class_pages.methods:
                     class_methods_filename = f"{output_dir}/{item_key}-methods.{doc_entry.get('defining_module', '').replace('.', '_')}.mdx"
                     print(f"Creating MDX content for {item_key} methods at {class_methods_filename}")
                     with open(class_methods_filename, 'w', encoding='utf-8') as f:
-                        f.write(class_methods)
+                        f.write(class_pages.methods)
 
         elif doc_entry.get("kind") == "function":
             template = generate_function_mdx_content(doc_entry, release_tag=args.release_tag)
