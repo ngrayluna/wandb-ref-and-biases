@@ -49,11 +49,41 @@ namespace: {namespace}
 
 {examples_section}
 
+"""
+
+
+CLASS_PROPERTIES_SECTION_TEMPLATE = """---
+title: {name} properties
+sidebarTitle: Properties
+page_kind: class-properties
+parent_slug: {parent_slug}
+kind: {kind}
+namespace: {namespace}
+---
+
+{class_title}
+
 {properties_section}
+
+"""
+
+
+CLASS_METHODS_SECTION_TEMPLATE = """---
+title: {name} methods
+sidebarTitle: Methods
+page_kind: class-methods
+parent_slug: {parent_slug}
+kind: {kind}
+namespace: {namespace}
+---
+
+{class_title}
 
 {methods_section}
 
 """
+
+
 
 ## Template for individual Click commands (commands that do not have subcommands) and Click command groups (commands that have subcommands) are imported from cli_doc_template.py to avoid circular imports.
 

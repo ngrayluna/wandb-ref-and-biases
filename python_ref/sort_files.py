@@ -41,6 +41,18 @@ def sort_logic(kind: str, namespace: str) -> str:
         return "custom-charts"
 
 
+def build_destination_path(output: str, category: str, filename: str, metadata: dict) -> str:
+    """Build the output path for a generated MDX file."""
+    basename = os.path.basename(filename)
+
+    if metadata.get("page_kind") in {"class-properties", "class-methods"}:
+        parent_slug = metadata.get("parent_slug", "")
+        if parent_slug:
+            return os.path.join(output, category, parent_slug, basename)
+
+    return os.path.join(output, category, basename)
+
+
 
 def main(args):
 
@@ -64,9 +76,11 @@ def main(args):
         if category is None:
             continue
         
-        destination_path = os.path.join(args.output, category, os.path.basename(filename))
+        destination_path = build_destination_path(args.output, category, filename, metadata)
+        os.makedirs(os.path.dirname(destination_path), exist_ok=True)
         os.rename(filename, destination_path)
-        print(f"Moved {os.path.basename(filename)} to {category}/")
+        destination_dir = os.path.relpath(os.path.dirname(destination_path), args.output)
+        print(f"Moved {os.path.basename(filename)} to {destination_dir}/")
 
 
 if __name__ == "__main__":
