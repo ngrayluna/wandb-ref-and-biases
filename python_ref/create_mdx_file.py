@@ -72,13 +72,24 @@ def build_function_arguments_section(arguments: list[dict]) -> str:
     )
 
 
-def build_class_constructor_arguments_section(arguments: list[dict]) -> str:
+def build_class_constructor_arguments_section(
+    arguments: list[dict],
+    signature: str,
+) -> str:
     """Build the Args section for constructor args on the main class page."""
+    parameter_types = extract_parameter_types(signature)
+
+    def format_constructor_argument(argument: dict) -> str:
+        return format_argument_response_field(
+            argument,
+            type_name=parameter_types.get(argument.get("name", ""), ""),
+        )
+
     return build_argument_section(
         heading="Args",
         arguments=arguments,
         heading_marker=PAGE_SECTION_HEADING,
-        argument_formatter=format_argument_bullet,
+        argument_formatter=format_constructor_argument,
     )
 
 
@@ -198,7 +209,10 @@ def build_method_raises_section(raises: list[dict]) -> str:
     """Build the Raises markdown section, or empty string if no exceptions raised."""
     if not raises:
         return ""
-    formatted_raises = "".join(format_raises_row(raise_) for raise_ in raises)
+    formatted_raises = "".join(
+        format_raise_response_field(raise_)
+        for raise_ in raises
+    )
     return build_markdown_section("Raises", formatted_raises, METHOD_SECTION_HEADING)
 
 def build_examples_section(examples: str) -> str:
@@ -274,6 +288,18 @@ def format_raises_row(raise_: dict) -> str:
     return f"- `{name}`: {description}\n"
 
 
+def format_raise_response_field(raise_: dict) -> str:
+    """Format a single raised exception as a Mintlify ResponseField component."""
+    name = escape_mdx_attribute(raise_.get("name", ""))
+    description = raise_.get("description", "").strip("\n")
+
+    return (
+        f'<ResponseField name="{name}">\n'
+        f"{description}\n"
+        "</ResponseField>\n\n"
+    )
+
+
 def validate_source_file(source_file: str) -> bool:
     """Check if the source file should be included based on its path. Exclude files in certain directories.
     Args:
@@ -301,10 +327,12 @@ def is_public_method_doc(method: dict) -> bool:
         method.get("source_file", "")
     )
 
-
 def format_method_heading(method: dict) -> str:
     """Format a method entry heading."""
-    return f"### <kbd>method</kbd> {method.get('qualname', '')}()"
+    return (
+        '## <Badge color="blue" size="lg" shape="rounded">method</Badge> '
+        f"{method.get('qualname', '')}()"
+    )
 
 
 def format_method_entry(method: dict) -> str:
@@ -335,7 +363,11 @@ def format_property_row(property_doc: dict) -> str:
     """Format a single property row for the Properties section."""
     name = property_doc.get("name", "")
     description = property_doc.get("description", "")
-    return f"### <kbd>property</kbd> {name}\n\n{description}\n\n"
+    return (
+        '## <Badge color="gray" size="lg" shape="rounded">property</Badge> '
+        f"{name}\n\n{description}\n\n"
+    )
+
 
 def format_argument_bullet(argument: dict) -> str:
     """Format a single argument as a markdown bullet."""
@@ -470,8 +502,10 @@ def format_function_page_title(name: str) -> str:
 
 def format_class_page_title(name: str) -> str:
     """Format the class title for the MDX file."""
-    return f"## <kbd>class</kbd> {name}"
-
+    return (
+        '## <Badge color="yellow" size="lg" shape="rounded">Class</Badge> '
+        f"{name}"
+    )
 
 def internal_use_only(doc_entry: dict) -> bool:
     """Check if a doc entry is marked for internal use only, based on its description or name.
@@ -500,6 +534,7 @@ def generate_class_mdx_content(
     ignore_init = doc_entry.get("ignore_init", False)
     public_name = doc_entry.get("public_name", "")
     parent_slug = format_output_slug(public_name)
+    class_signature = doc_entry.get("signature", "")
     class_main = CLASS_TEMPLATE.format(
         name=doc_entry.get("public_name", ""),
         kind=doc_entry.get("kind", ""),
@@ -507,13 +542,14 @@ def generate_class_mdx_content(
         class_title=format_class_page_title(doc_entry.get("filename", "")),
         description=build_description_section(doc_entry.get("description", "")),
         signature=(
-            "" if ignore_init else build_signature_block(doc_entry.get("signature", ""))
+            "" if ignore_init else build_signature_block(class_signature)
         ),
         arguments_section=(
             ""
             if ignore_init
             else build_class_constructor_arguments_section(
-                doc_entry.get("arguments", [])
+                doc_entry.get("arguments", []),
+                class_signature,
             )
         ),
         attributes_section=build_attributes_section(doc_entry.get("attributes", [])),

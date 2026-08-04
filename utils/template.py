@@ -39,9 +39,10 @@ namespace: {namespace}
 {github_path}
 
 {class_title}
-{signature}
 
 {description}
+
+{signature}
 
 {arguments_section}
 
