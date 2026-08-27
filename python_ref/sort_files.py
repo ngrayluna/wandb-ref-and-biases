@@ -20,7 +20,7 @@ def create_directories(root_directory: str) -> None:
 def sort_logic(kind: str, namespace: str) -> str:
     """Determine category for an MDX file based on its metadata."""
 
-    if kind == "function" and "wandb.sdk" in namespace:
+    if kind == "function" and (namespace.startswith("wandb.sdk.") or namespace == "wandb.wandb_agent"):
         return "functions"
     if "wandb.sdk.data_types" in namespace:
         return "data-types"
