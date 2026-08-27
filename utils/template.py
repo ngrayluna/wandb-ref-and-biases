@@ -39,9 +39,10 @@ namespace: {namespace}
 {github_path}
 
 {class_title}
-{signature}
 
 {description}
+
+{signature}
 
 {arguments_section}
 
@@ -52,7 +53,7 @@ namespace: {namespace}
 """
 
 
-CLASS_PROPERTIES_SECTION_TEMPLATE = """---
+CLASS_PROPERTIES_PAGE_TEMPLATE = """---
 title: {name} properties
 sidebarTitle: Properties
 page_kind: class-properties
@@ -68,7 +69,7 @@ namespace: {namespace}
 """
 
 
-CLASS_METHODS_SECTION_TEMPLATE = """---
+CLASS_METHODS_PAGE_TEMPLATE = """---
 title: {name} methods
 sidebarTitle: Methods
 page_kind: class-methods
@@ -82,8 +83,6 @@ namespace: {namespace}
 {methods_section}
 
 """
-
-
 
 ## Template for individual Click commands (commands that do not have subcommands) and Click command groups (commands that have subcommands) are imported from cli_doc_template.py to avoid circular imports.
 
