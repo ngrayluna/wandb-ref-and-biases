@@ -24,8 +24,7 @@ def sort_logic(kind: str, namespace: str) -> str:
     global functions. This may not cover all cases and could be refined further.
     """
 
-    if kind == "function" and (
-    namespace.startswith("wandb.sdk.") or namespace == "wandb.wandb_agent"):
+    if kind == "function" and (namespace.startswith("wandb.sdk.") or namespace == "wandb.wandb_agent"):
         return "functions"
     if "wandb.sdk.data_types" in namespace:
         return "data-types"

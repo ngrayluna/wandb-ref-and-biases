@@ -18,8 +18,25 @@ import argparse
 import click
 import inspect
 import json
-from wandb.cli.cli import cli
 from typing import Dict, Tuple, Optional, List, Iterator
+
+try:
+    from click.core import UNSET as CLICK_UNSET
+except ImportError:  # pragma: no cover - older Click versions do not expose this.
+    CLICK_UNSET = object()
+
+
+def json_safe_default(default):
+    """Return a JSON-serializable representation of a Click default value."""
+    if default is CLICK_UNSET:
+        return None
+    return default
+
+
+def get_wandb_cli():
+    from wandb.cli.cli import cli
+
+    return cli
 
 def classify_option(param: click.Option) -> str:
     """
@@ -58,7 +75,7 @@ def inspect_command(command: click.Command) -> Dict[str, List[Dict]]:
                 "description": param.help or "",
                 "opts": param.opts,
                 "secondary_opts": param.secondary_opts,
-                "default": param.default,
+                "default": json_safe_default(param.default),
                 "required": param.required,
                 "hidden": param.hidden,
                 "classification": classify_option(param),
@@ -70,7 +87,7 @@ def inspect_command(command: click.Command) -> Dict[str, List[Dict]]:
             arg_info = {
                 "name": param.name,
                 "type": type(param.type).__name__,
-                "default": param.default,
+                "default": json_safe_default(param.default),
                 "required": param.required,
                 "nargs": param.nargs,
             }
@@ -141,7 +158,7 @@ def get_public_commands_with_source():
     Returns:
         Dict mapping func_name -> {name, func_name, source_file, line_number, is_click_group, options, arguments, subcommands?}
     """
-    commands = getattr(cli, 'commands', {})
+    commands = getattr(get_wandb_cli(), 'commands', {})
     result = {}
 
     for name, cmd in commands.items():
