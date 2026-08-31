@@ -8,7 +8,7 @@ def _github_button(href_links: str) -> str:
     Args:
         href_links (str): URL for the GitHub button.
     """
-    return '<GitHubLink url="' + href_links + '" />' + "\n\n"
+    return '<GitHubLink compact url="' + href_links + '" />' + "\n\n"
 
 def format_github_button(
     source_file: str,

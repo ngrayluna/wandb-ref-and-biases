@@ -38,7 +38,7 @@ def format_argument_response_field(
         description = argument.get("description", "").strip("\n")
 
     if not description:
-        description = "No value provided."
+        description = "No description provided."
 
     return (
         f'<ResponseField name="{name}" type="{type_value}">\n'
@@ -207,7 +207,7 @@ def format_property_row(property_doc: dict) -> str:
     description = property_doc.get("description", "")
     return_type = property_doc.get("returns", "")
     if not description:
-        description = "No value provided."
+        description = "No description provided."
     return (
         f'<ResponseField name="{name}" type="{return_type}">\n'
         f"{description}\n"
