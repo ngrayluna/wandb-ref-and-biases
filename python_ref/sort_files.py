@@ -80,7 +80,7 @@ def main(args):
         #destination_path = build_destination_path(args.output, category, filename, metadata)
         os.makedirs(os.path.dirname(destination_path), exist_ok=True)
         os.rename(filename, destination_path)
-        print(f"Moved {os.path.basename(filename)} to {category}/")
+        #print(f"Moved {os.path.basename(filename)} to {category}/")
         # Comment out when we add sub pages
         # destination_dir = os.path.relpath(os.path.dirname(destination_path), args.output)
         # print(f"Moved {os.path.basename(filename)} to {destination_dir}/")

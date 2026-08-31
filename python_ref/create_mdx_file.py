@@ -12,7 +12,7 @@ import sys
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from utils.template import (
-    # CLASS_METHODS_SECTION_TEMPLATE,
+    CLASS_METHODS_SECTION_TEMPLATE,
     # CLASS_PROPERTIES_SECTION_TEMPLATE,
     CLASS_TEMPLATE,
     FUNCTION_TEMPLATE,
@@ -190,13 +190,29 @@ def format_methods_row(method: dict) -> str:
     arguments = build_method_arguments_section(method.get("arguments", []))
     raises = build_method_raises_section(method.get("raises", []))
     examples = build_method_examples_section(method.get("examples", ""))
-    return f"### <kbd>method</kbd> {full_name}()\n\n{signature}\n\n{description}\n\n{arguments}\n\n{raises}\n\n{examples}"
+    full_name_title = f'### <Badge color="blue" size="lg" shape="rounded">method</Badge> {full_name}()'
+    return CLASS_METHODS_SECTION_TEMPLATE.format(
+        full_name=full_name_title,
+        description=description,
+        signature=signature,
+        arguments=arguments,
+        raises=raises,
+        examples=examples,
+    )
+
 
 def format_property_row(property_doc: dict) -> str:
     """Format a single property row for the Properties section."""
     name = property_doc.get("name", "")
     description = property_doc.get("description", "")
-    return f"### <kbd>property</kbd> {name}\n\n{description}\n\n"
+    return_type = property_doc.get("returns", "")
+    if not description:
+        description = "No value provided."
+    return (
+        f'<ResponseField name="{name}" type="{return_type}">\n'
+        f"{description}\n"
+        "</ResponseField>\n\n"
+    )
 
 def format_argument_row(argument: dict) -> str:
     """Format a single argument row for the Arguments section."""

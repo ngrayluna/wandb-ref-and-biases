@@ -73,6 +73,22 @@ namespace: {namespace}
 # """
 
 
+CLASS_METHODS_SECTION_TEMPLATE = """
+{full_name}
+
+{signature}
+
+{description}
+
+{arguments}
+
+{raises}
+
+{examples}
+
+"""
+
+
 # CLASS_METHODS_SECTION_TEMPLATE = """---
 # title: {name} methods
 # sidebarTitle: Methods
