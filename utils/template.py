@@ -13,9 +13,10 @@ namespace: {namespace}
 {github_path}
 
 {function_title}
-{signature}
 
 {description}
+
+{signature}
 
 {arguments_section}
 
@@ -39,16 +40,16 @@ namespace: {namespace}
 {github_path}
 
 {class_title}
-{signature}
 
 {description}
+
+{signature}
 
 {arguments_section}
 
 {attributes_section}
 
 {examples_section}
-
 """
 
 

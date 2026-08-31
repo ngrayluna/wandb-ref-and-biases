@@ -278,11 +278,18 @@ def format_signature_block(signature: str) -> str:
 
 def format_function_page_title(name: str) -> str:
     """Format the function title for the MDX file."""
-    return f"## <kbd>function</kbd> {name}"
+    return (
+        '## <Badge color="blue" size="lg" shape="rounded">function</Badge> '
+        f"{name}()"
+    )
+
 
 def format_class_page_title(name: str) -> str:
     """Format the class title for the MDX file."""
-    return f"## <kbd>class</kbd> {name}"
+    return (
+        '## <Badge color="yellow" size="lg" shape="rounded">Class</Badge> '
+        f"{name}"
+    )
 
 
 def internal_use_only(doc_entry: dict) -> bool:
