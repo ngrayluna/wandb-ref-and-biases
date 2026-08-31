@@ -26,21 +26,25 @@ def build_description_section(description: str) -> str:
     return f"\n\n{description}\n\n"
 
 
-def format_argument_response_field(argument: dict, type_name: str = "") -> str:
+def format_argument_response_field(
+    argument: dict,
+    description: str | None = None,
+) -> str:
     """Format a single argument as a Mintlify ResponseField component."""
-    # name = escape_mdx_attribute(argument.get("name", ""))
-    # type_value = escape_mdx_attribute(type_name)
-
     name = argument.get("name", "")
-    type_value = type_name
-    description = argument.get("description", "").strip("\n")
+    type_value = argument.get("type_name", "")
+
+    if description is None:
+        description = argument.get("description", "").strip("\n")
+
+    if not description:
+        description = "No value provided."
 
     return (
         f'<ResponseField name="{name}" type="{type_value}">\n'
         f"{description}\n"
         "</ResponseField>\n\n"
     )
-
 
 def build_arguments_section(arguments: list[dict]) -> str:
     """Build the Arguments markdown section, or empty string if no arguments."""
@@ -220,12 +224,7 @@ def format_property_row(property_doc: dict) -> str:
 
 def format_argument_row(argument: dict) -> str:
     """Format a single argument row for the Arguments section."""
-    name = argument.get("name", "")
-    description = argument.get("description", "")
-    if not description:
-        return f"- `{name}`: \n"
-
-    return f"- `{name}`: {indent_markdown_list_item_text(description)}\n"
+    return format_argument_response_field(argument)
 
 
 def format_attribute_row(attribute: dict) -> str:
