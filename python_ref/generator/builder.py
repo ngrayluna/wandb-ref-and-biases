@@ -92,6 +92,7 @@ def build_argument_docs(
                 name=parameter.name,
                 description=parsed.description if parsed is not None else "",
                 internal_use=parsed.internal_use if parsed is not None else False,
+                type_name=format_annotation(parameter.annotation)
             )
         )
 
@@ -122,6 +123,7 @@ def build_pydantic_argument_docs(cls: type[Any]) -> list[ArgumentDoc]:
                 name=public_name,
                 description=description,
                 internal_use=check_lazydoc(description),
+                type_name=format_annotation(getattr(field, "annotation", None)),
             )
         )
 

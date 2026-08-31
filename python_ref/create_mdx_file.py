@@ -25,6 +25,23 @@ def build_description_section(description: str) -> str:
         return ""
     return f"\n\n{description}\n\n"
 
+
+def format_argument_response_field(argument: dict, type_name: str = "") -> str:
+    """Format a single argument as a Mintlify ResponseField component."""
+    # name = escape_mdx_attribute(argument.get("name", ""))
+    # type_value = escape_mdx_attribute(type_name)
+
+    name = argument.get("name", "")
+    type_value = type_name
+    description = argument.get("description", "").strip("\n")
+
+    return (
+        f'<ResponseField name="{name}" type="{type_value}">\n'
+        f"{description}\n"
+        "</ResponseField>\n\n"
+    )
+
+
 def build_arguments_section(arguments: list[dict]) -> str:
     """Build the Arguments markdown section, or empty string if no arguments."""
     if not arguments:

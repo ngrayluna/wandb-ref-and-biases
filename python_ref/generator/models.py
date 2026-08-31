@@ -23,6 +23,7 @@ class ArgumentDoc:
     name: str
     description: str = ""
     internal_use: bool = False
+    type_name: str = ""
 
 
 @dataclass(frozen=True, slots=True)
