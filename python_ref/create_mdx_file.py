@@ -13,7 +13,7 @@ import sys
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from utils.template import (
     CLASS_METHODS_SECTION_TEMPLATE,
-    CLASS_PROPERTIES_SECTION_TEMPLATE,
+    # CLASS_PROPERTIES_SECTION_TEMPLATE,
     CLASS_TEMPLATE,
     FUNCTION_TEMPLATE,
 )
@@ -24,6 +24,27 @@ def build_description_section(description: str) -> str:
     if not description:
         return ""
     return f"\n\n{description}\n\n"
+
+
+def format_argument_response_field(
+    argument: dict,
+    description: str | None = None,
+) -> str:
+    """Format a single argument as a Mintlify ResponseField component."""
+    name = argument.get("name", "")
+    type_value = argument.get("type_name", "")
+
+    if description is None:
+        description = argument.get("description", "").strip("\n")
+
+    if not description:
+        description = "No description provided."
+
+    return (
+        f'<ResponseField name="{name}" type="{type_value}">\n'
+        f"{description}\n"
+        "</ResponseField>\n\n"
+    )
 
 def build_arguments_section(arguments: list[dict]) -> str:
     """Build the Arguments markdown section, or empty string if no arguments."""
@@ -111,21 +132,14 @@ def build_signature_block(signature: str) -> str:
 
     return f"```python\n{formatted_signature}\n```"
 
-def build_methods_page(methods: list[dict]) -> str:
-    """Build the Methods markdown page for a class, or empty string if no methods."""
+
+def build_methods_section(methods: list[dict]) -> str:
     if not methods:
         return ""
-
-    formatted_methods = "".join(
-        format_methods_row(method)
-        for method in methods
-        if not internal_use_only(method) and validate_source_file(method.get("source_file", ""))
-    )
-    if not formatted_methods:
+    formatted_methods = "".join(format_methods_row(method) for method in methods if not internal_use_only(method) and validate_source_file(method.get("source_file", "")))
+    if formatted_methods == "":
         return ""
-
-    return f"\n\n{formatted_methods}"
-
+    return f"## Methods\n\n{formatted_methods}"
 
 def build_properties_section(properties: list[dict]) -> str:
     """Build the Properties mardown section for a class, or empty string if no properties.
@@ -141,26 +155,9 @@ def build_properties_section(properties: list[dict]) -> str:
         return ""
     return f"## Properties\n\n{formatted_properties}"
 
-
-def build_properties_page(properties: list[dict]) -> str:
-    """Build the Properties mardown page for a class, or empty string if no properties.
-
-    Properties marked for internal use only (identified by 'lazydoc' in description) are
-    filtered out and not included in the output.
-    """
-    if not properties:
-        return ""
-
-    formatted_properties = "".join(format_property_row(prop) for prop in properties if not internal_use_only(prop))
-    if not formatted_properties:
-        return ""
-    return f"\n\n{formatted_properties}"
-
-
-def format_output_slug(name: str) -> str:
-    """Format an object name the same way generated MDX filenames are normalized."""
-    return name.lower()
-
+# def format_output_slug(name: str) -> str:
+#     """Format an object name the same way generated MDX filenames are normalized."""
+#     return name.lower()
 
 
 def format_raises_row(raise_: dict) -> str:
@@ -193,22 +190,33 @@ def format_methods_row(method: dict) -> str:
     arguments = build_method_arguments_section(method.get("arguments", []))
     raises = build_method_raises_section(method.get("raises", []))
     examples = build_method_examples_section(method.get("examples", ""))
-    return f"### <kbd>method</kbd> {full_name}()\n\n{signature}\n\n{description}\n\n{arguments}\n\n{raises}\n\n{examples}"
+    full_name_title = f'### <Badge color="blue" size="lg" shape="rounded">method</Badge> {full_name}()'
+    return CLASS_METHODS_SECTION_TEMPLATE.format(
+        full_name=full_name_title,
+        description=description,
+        signature=signature,
+        arguments=arguments,
+        raises=raises,
+        examples=examples,
+    )
+
 
 def format_property_row(property_doc: dict) -> str:
     """Format a single property row for the Properties section."""
     name = property_doc.get("name", "")
     description = property_doc.get("description", "")
-    return f"### <kbd>property</kbd> {name}\n\n{description}\n\n"
+    return_type = property_doc.get("returns", "")
+    if not description:
+        description = "No description provided."
+    return (
+        f'<ResponseField name="{name}" type="{return_type}">\n'
+        f"{description}\n"
+        "</ResponseField>\n\n"
+    )
 
 def format_argument_row(argument: dict) -> str:
     """Format a single argument row for the Arguments section."""
-    name = argument.get("name", "")
-    description = argument.get("description", "")
-    if not description:
-        return f"- `{name}`: \n"
-
-    return f"- `{name}`: {indent_markdown_list_item_text(description)}\n"
+    return format_argument_response_field(argument)
 
 
 def format_attribute_row(attribute: dict) -> str:
@@ -262,11 +270,18 @@ def format_signature_block(signature: str) -> str:
 
 def format_function_page_title(name: str) -> str:
     """Format the function title for the MDX file."""
-    return f"## <kbd>function</kbd> {name}"
+    return (
+        '## <Badge color="blue" size="lg" shape="rounded">function</Badge> '
+        f"{name}()"
+    )
+
 
 def format_class_page_title(name: str) -> str:
     """Format the class title for the MDX file."""
-    return f"## <kbd>class</kbd> {name}"
+    return (
+        '## <Badge color="yellow" size="lg" shape="rounded">Class</Badge> '
+        f"{name}"
+    )
 
 
 def internal_use_only(doc_entry: dict) -> bool:
@@ -283,12 +298,12 @@ def internal_use_only(doc_entry: dict) -> bool:
     return "lazydoc" in doc_entry.get("description", "") or doc_entry.get("name", "").startswith("_") or doc_entry.get("qualname", "").startswith("_")
 
 
-def generate_class_mdx_content(doc_entry: dict, release_tag: Optional[str] = None) -> List[str]:
+def generate_class_mdx_content(doc_entry: dict, release_tag: Optional[str] = None) -> str:
     """Generate MDX content for a class object using the class template."""
     ignore_init = doc_entry.get("ignore_init", False)
-    public_name = doc_entry.get("public_name", "")
-    parent_slug = format_output_slug(public_name)
-    class_main = CLASS_TEMPLATE.format(
+    #public_name = doc_entry.get("public_name", "")
+    #parent_slug = format_output_slug(public_name)
+    return CLASS_TEMPLATE.format(
         name=doc_entry.get("public_name", ""),
         kind=doc_entry.get("kind", ""),
         namespace=doc_entry.get("defining_module", ""),
@@ -299,6 +314,7 @@ def generate_class_mdx_content(doc_entry: dict, release_tag: Optional[str] = Non
         returns_section=build_returns_section(doc_entry.get("returns", "")),
         attributes_section=build_attributes_section(doc_entry.get("attributes", [])),
         properties_section=build_properties_section(doc_entry.get("properties", [])),
+        methods_section=build_methods_section(doc_entry.get("methods", [])),
         examples_section=build_examples_section(doc_entry.get("examples", "")),
         import_statements=github_import_statement(),
         github_path=format_github_button(
@@ -306,30 +322,6 @@ def generate_class_mdx_content(doc_entry: dict, release_tag: Optional[str] = Non
                 line_number=doc_entry.get("line_number", 0),
                 release_tag=release_tag)
     )
-
-    properties_section = build_properties_page(doc_entry.get("properties", []))
-    class_properties = ""
-    if properties_section:
-        class_properties = CLASS_PROPERTIES_SECTION_TEMPLATE.format(
-            name=public_name,
-            parent_slug=parent_slug,
-            kind=doc_entry.get("kind", ""),
-            namespace=doc_entry.get("defining_module", ""),
-            class_title=format_class_page_title(doc_entry.get("filename", "")),
-            properties_section=properties_section)
-
-    methods_section = build_methods_page(doc_entry.get("methods", []))
-    class_methods = ""
-    if methods_section:
-        class_methods = CLASS_METHODS_SECTION_TEMPLATE.format(
-            name=public_name,
-            parent_slug=parent_slug,
-            kind=doc_entry.get("kind", ""),
-            namespace=doc_entry.get("defining_module", ""),
-            class_title=format_class_page_title(doc_entry.get("filename", "")),
-            methods_section=methods_section)
-
-    return [class_main, class_properties, class_methods]
 
 def generate_function_mdx_content(doc_entry: dict, release_tag: Optional[str] = None) -> str:
     """Generate MDX content for a function object using the function template."""
@@ -369,36 +361,17 @@ def main(args):
 
         doc_entry = json_file[item_key]
         if doc_entry.get("kind") == "class":
-            class_main, class_properties, class_methods = generate_class_mdx_content(doc_entry, release_tag=args.release_tag)
-
-            if class_main:
-                class_main_filename = f"{output_dir}/{item_key}.{doc_entry.get('defining_module', '').replace('.', '_')}.mdx"
-                print(f"Creating MDX content for {item_key} at {class_main_filename}")
-                with open(class_main_filename, 'w', encoding='utf-8') as f:
-                    f.write(class_main)
-
-                if class_properties:
-                    class_properties_filename = f"{output_dir}/{item_key}-properties.{doc_entry.get('defining_module', '').replace('.', '_')}.mdx"
-                    print(f"Creating MDX content for {item_key} properties at {class_properties_filename}")
-                    with open(class_properties_filename, 'w', encoding='utf-8') as f:
-                        f.write(class_properties)
-
-                if class_methods:
-                    class_methods_filename = f"{output_dir}/{item_key}-methods.{doc_entry.get('defining_module', '').replace('.', '_')}.mdx"
-                    print(f"Creating MDX content for {item_key} methods at {class_methods_filename}")
-                    with open(class_methods_filename, 'w', encoding='utf-8') as f:
-                        f.write(class_methods)
+            template = generate_class_mdx_content(doc_entry, release_tag=args.release_tag)
 
         elif doc_entry.get("kind") == "function":
             template = generate_function_mdx_content(doc_entry, release_tag=args.release_tag)
-            generated_filename = f"{output_dir}/{item_key}.{doc_entry.get('defining_module', '').replace('.', '_')}.mdx"
-            print(f"Creating MDX content for {item_key} at {generated_filename}")
-            with open(generated_filename, 'w', encoding='utf-8') as f:
-                f.write(template)
         else:
             raise ValueError(f"Unsupported item kind: {doc_entry.get('kind')}")
 
-        # print(f"Created MDX content for {item_key}")
+        print(f"Created MDX content for {item_key}")
+        output_dir = args.output_dir
+        with open(f"{output_dir}/{item_key}.{doc_entry.get('defining_module', '').replace('.', '_')}.mdx", 'w', encoding='utf-8') as f:
+            f.write(template)
 
     print("MDX generation complete.\n") 
 
