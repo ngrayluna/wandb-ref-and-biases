@@ -105,6 +105,6 @@ find "$MDX_OUTPUT_DIR" -name ".DS_Store" -delete
 
 echo "Copying generated docs to $DOCS_REPO_DIR/models/ref/python/..."
 
-DEST="$DOCS_REPO_DIR/models/ref/python"
+DEST="$DOCS_REPO_DIR/public-docs/products/wandb/ref/python"
 replace_directory "$DEST"
 cp -R "$MDX_OUTPUT_DIR"/. "$DEST"/

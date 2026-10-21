@@ -62,4 +62,4 @@ cp -r "$TMP_OUTPUT_DIR"/* "$MDX_OUTPUT_DIR/"
 
 # Copy generated .mdx files to the docs repo
 echo "Copying .mdx files to $DOCS_REPO_DIR/models/ref/cli/"
-cp -r "$MDX_OUTPUT_DIR"/* "$DOCS_REPO_DIR/models/ref/cli/"
+cp -r "$MDX_OUTPUT_DIR"/* "$DOCS_REPO_DIR/public-docs/products/wandb/ref/cli/"
