@@ -15,18 +15,18 @@ The W&B Public API provides programmatic access to query, export, and update dat
 
 | Component | Description |
 |-----------|-------------|
-| [`Api`](/models/ref/python/public-api/api/) | Main entry point for the Public API. Query runs, projects, and artifacts across your organization. |
-| [`Runs`](/models/ref/python/public-api/runs/) | Access and manage individual training runs, including history, logs, and metrics. |
-| [`Artifacts`](/models/artifacts/) | Query and download model artifacts, datasets, and other versioned files. |
-| [`Sweeps`](/models/sweeps/) | Access hyperparameter sweep data and analyze optimization results. |
-| [`Projects`](/models/ref/python/public-api/projects/) | Manage projects and access project-level metadata and settings. |
-| [`Reports`](/models/reports/create-a-report/) | Programmatically access and manage W&B Reports. |
-| [`Team`](/models/ref/python/public-api/team) | Query team information and manage team-level resources. |
-| [`User`](/models/ref/python/public-api/user) | Access user profiles and user-specific data. |
-| [`Files`](/models/ref/python/public-api/files/) | Download and manage files associated with runs. |
+| [`Api`](/products/wandb/ref/python/public-api/api) | Main entry point for the Public API. Query runs, projects, and artifacts across your organization. |
+| [`Runs`](/products/wandb/ref/python/public-api/runs) | Access and manage individual training runs, including history, logs, and metrics. |
+| [`Artifacts`](/products/wandb/artifacts) | Query and download model artifacts, datasets, and other versioned files. |
+| [`Sweeps`](/products/wandb/sweeps) | Access hyperparameter sweep data and analyze optimization results. |
+| [`Projects`](/products/wandb/ref/python/public-api/projects) | Manage projects and access project-level metadata and settings. |
+| [`Reports`](/products/wandb/reports/create-a-report) | Programmatically access and manage W&B Reports. |
+| [`Team`](/products/wandb/ref/python/public-api/team) | Query team information and manage team-level resources. |
+| [`User`](/products/wandb/ref/python/public-api/user) | Access user profiles and user-specific data. |
+| [`Files`](/products/wandb/ref/python/public-api/files) | Download and manage files associated with runs. |
 | `History` | Access detailed time-series metrics logged during training (see Run.history). |
-| [`Automations`](./automations/) | Manage automated workflows and actions. |
-| [`Integrations`](/models/integrations) | Configure and manage third-party integrations. |
+| [`Automations`](/products/wandb/ref/python/automations) | Manage automated workflows and actions. |
+| [`Integrations`](/products/wandb/integrations) | Configure and manage third-party integrations. |
 
 ## Common use cases
 
@@ -92,7 +92,7 @@ artifact.download()
 
 ### Download an Artifact from a registry
 
-The following example shows how to retrieve a linked artifact from a W&B Registry
+The following example shows how to retrieve a linked artifact from a Registry:
 
 ```python
 import wandb
@@ -111,9 +111,9 @@ fetched_artifact = api.artifact(name = artifact_name)
 downloaded_path = fetched_artifact.download()
 ```
 
-### Query W&B Registry 
+### Query Registry 
 
-Use Mongo-like filters to query W&B Registries, Collections, and Artifacts. The following example demonstrates how to filter collections by name using a regular expression.
+Use Mongo-like filters to query Registries, Collections, and Artifacts. The following example demonstrates how to filter collections by name using a regular expression.
 
 ```python
 import wandb
@@ -131,4 +131,4 @@ collection_filters = {
 collections = api.registries().collections(filter=collection_filters)
 ```
 
-For more information on how to query a registry, collection, or artifact, see the [Find registry items](/models/registry/search_registry).
+For more information on how to query a registry, collection, or artifact, see the [Find registry items](/products/registry/search_registry).
